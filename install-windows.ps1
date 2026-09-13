@@ -41,8 +41,8 @@ Start-Sleep -Milliseconds 300
 New-Item -ItemType Directory -Force $dest | Out-Null
 Copy-Item (Join-Path $src 'Snake.exe') $dest -Force
 Copy-Item (Join-Path $src 'Snake.ico') $dest -Force
-if (Test-Path (Join-Path $src 'web')) {
-  Copy-Item (Join-Path $src 'web') $dest -Recurse -Force
+if (Test-Path (Join-Path $src 'docs')) {
+  Copy-Item (Join-Path $src 'docs') $dest -Recurse -Force
 }
 
 $ws = New-Object -ComObject WScript.Shell

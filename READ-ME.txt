@@ -38,15 +38,15 @@ SEND IT TO SOMEONE           ->  send\
   send\READ-ME.txt has the details, including why phones need a link.
 
 
-PUT IT ONLINE YOURSELF       ->  web\
+PUT IT ONLINE YOURSELF       ->  docs\
 -----------------------------------------------------------------------------
 The complete web app. Upload this folder to any free static host - GitHub
 Pages, Netlify Drop, Cloudflare Pages - and you get your own https address
 that installs on Android, iPhone and Mac. No build step; upload as-is.
 
-  web\serve.ps1             serve it over your own Wi-Fi instead
-  web\make-single-file.ps1  rebuild the one-file Snake.html
-  web\make-icons.ps1        regenerate the app icons
+  docs\serve.ps1             serve it over your own Wi-Fi instead
+  docs\make-single-file.ps1  rebuild the one-file Snake.html
+  docs\make-icons.ps1        regenerate the app icons
 
 INSTALL.md has the step-by-step for each platform.
 
@@ -60,5 +60,5 @@ CHANGE IT                    ->  source\
   build.ps1     rebuilds Snake.exe - right-click -> Run with PowerShell
 
 It builds with the C# compiler already in Windows, so there is nothing to
-install to work on it. The web version in web\index.html is separate, written
+install to work on it. The web version in docs\index.html is separate, written
 in JavaScript, and needs no build at all - just edit and refresh.
