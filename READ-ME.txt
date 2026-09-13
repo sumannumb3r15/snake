@@ -1,0 +1,64 @@
+SNAKE
+=====
+
+Two games in one: Snake 2D (flat board, edges wrap round) and Snake 3D
+(endless night sky you fly through). Everything is in this folder.
+
+
+PLAY IT
+-----------------------------------------------------------------------------
+Double-click  Snake.exe
+
+That is the whole thing - a real Windows app, no install needed. It opens a
+picker; choose a game with the arrow keys and Enter, or click one.
+
+  Snake 2D    arrows or WASD          eat apples, gold is worth 5
+                                      the edges wrap; biting yourself ends it
+  Snake 3D    left/right  bank        fly near a red block to eat it
+              up/down     climb/dive  nothing can end a run - you glide over
+              Shift       boost       your own tail and over rocks
+
+Esc goes back to the picker. High scores are kept in %APPDATA%\SnakeApp.
+
+Want it on the Start menu and in Settings > Apps? Run install-windows.ps1
+(right-click -> Run with PowerShell). Undo with:  install-windows.ps1 -Uninstall
+
+
+SEND IT TO SOMEONE           ->  send\
+-----------------------------------------------------------------------------
+  Windows friend   send  send\Snake-Windows.exe        one file, double-click
+  Mac friend       send  send\Snake-AnyBrowser.html    one file, double-click
+  Android/iPhone   send  the LINK below - a file cannot install on a phone
+
+  https://claude.ai/code/artifact/888a7719-311d-4648-a181-66e701923285
+
+  That link is private to your Claude account. Open it and use the page's
+  share menu first, or your friend will get a permission error.
+
+  send\READ-ME.txt has the details, including why phones need a link.
+
+
+PUT IT ONLINE YOURSELF       ->  web\
+-----------------------------------------------------------------------------
+The complete web app. Upload this folder to any free static host - GitHub
+Pages, Netlify Drop, Cloudflare Pages - and you get your own https address
+that installs on Android, iPhone and Mac. No build step; upload as-is.
+
+  web\serve.ps1             serve it over your own Wi-Fi instead
+  web\make-single-file.ps1  rebuild the one-file Snake.html
+  web\make-icons.ps1        regenerate the app icons
+
+INSTALL.md has the step-by-step for each platform.
+
+
+CHANGE IT                    ->  source\
+-----------------------------------------------------------------------------
+  Program.cs    the 2D game      (WinForms, GDI+)
+  Snake3D.cs    the 3D game      (WPF 3D)
+  Launcher.cs   the picker, and the app's entry point
+
+  build.ps1     rebuilds Snake.exe - right-click -> Run with PowerShell
+
+It builds with the C# compiler already in Windows, so there is nothing to
+install to work on it. The web version in web\index.html is separate, written
+in JavaScript, and needs no build at all - just edit and refresh.

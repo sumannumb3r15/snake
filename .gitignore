@@ -1,0 +1,13 @@
+# build output - regenerate with source/build.ps1
+# (Snake.exe is committed on purpose so it can be downloaded without building)
+*.log
+*.pdb
+*.user
+
+# the one-file web build, regenerate with web/make-single-file.ps1
+Snake.html
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store

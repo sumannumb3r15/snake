@@ -1,0 +1,18 @@
+{
+  "name": "Snake - 2D & 3D",
+  "short_name": "Snake",
+  "description": "Two snakes: a flat board with wrap-around edges, and an endless 3D night sky.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#03060c",
+  "theme_color": "#03060c",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

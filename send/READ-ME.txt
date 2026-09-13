@@ -1,0 +1,80 @@
+SNAKE - what to send to whom
+============================
+
+There are two real files here, plus one link. Which you send depends on what
+your friend has.
+
+
+WINDOWS  ->  send  Snake-Windows.exe
+-----------------------------------------------------------------------------
+One file, 58 KB. They double-click it and play. Nothing to install, nothing
+to download alongside it. Works on Windows 10 and 11 as-is.
+
+Windows may show "Windows protected your PC" the first time, because the file
+is not code-signed (signing costs money and needs a certificate). They click
+"More info" then "Run anyway". That warning is normal for any unsigned app.
+
+This is the best version of the game - a real native app.
+
+
+MAC  ->  send  Snake-AnyBrowser.html
+-----------------------------------------------------------------------------
+One file, 49 KB, everything inside it. They double-click, it opens in Safari
+or Chrome, and it plays. No install, no internet needed.
+
+If they want it as a proper Dock app instead of a browser tab, they need the
+LINK below, not this file - see "Why phones and Dock apps need a link".
+
+
+ANDROID / IPHONE  ->  send the LINK
+-----------------------------------------------------------------------------
+    https://claude.ai/code/artifact/888a7719-311d-4648-a181-66e701923285
+
+IMPORTANT: that link is private to your Claude account right now. Open it and
+use the page's share menu first, or your friend will just get a permission
+error.
+
+Then:
+  iPhone   Safari -> Share -> Add to Home Screen
+  Android  Chrome -> menu -> Install app / Add to Home screen
+
+It becomes a real icon on their home screen, full screen, and works offline
+after the first load.
+
+
+Why phones and Dock apps need a link, not a file
+-----------------------------------------------------------------------------
+Android and iOS will only install a web app that is served from a web address.
+A page opened from local storage is not eligible for "Install app" or "Add to
+Home Screen" - that is a rule in the phone, not something the file can change.
+On an iPhone you cannot really get an .html file into Safari from the Files
+app at all.
+
+So there is no single file that installs on a phone. You can send
+Snake-AnyBrowser.html to a phone and they can usually still open and play it
+from their downloads, but there will be no icon and no offline mode.
+
+
+What a true per-platform app would need
+-----------------------------------------------------------------------------
+If you want a real installable app file for each platform rather than the web
+version, this is what each one actually requires:
+
+  Android  .apk   Android SDK + JDK, and the apk must be signed with a keystore
+  macOS    .app   a Mac with Xcode; unsigned apps get blocked by Gatekeeper
+                  unless the user right-clicks -> Open
+  iPhone   .ipa   a Mac with Xcode AND a paid Apple Developer account; Apple
+                  does not allow installing an app any other way
+
+None of those toolchains exist on the PC this was built on, and the iPhone one
+cannot be done from Windows at any price. That is why the web version exists -
+it is the one thing that genuinely reaches all four.
+
+
+Free alternative to the Claude link
+-----------------------------------------------------------------------------
+If you would rather not share through your Claude account, upload the "web"
+folder (next to this one) to any free static host - GitHub Pages, Netlify
+Drop, Cloudflare Pages. You get your own https address that installs exactly
+the same way, and you can share it with anyone. The folder is complete and
+needs no build step.

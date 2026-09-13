@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#03060c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Snake">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
+<title>Snake</title>
+<!-- single-file build - everything inline -->
+<style>
+  :root{
+    --bg:#03060c; --text:#e8eff7; --muted:#7c8fa5;
+    --accent:#4ade80; --sky:#7fb2ff; --gold:#fbbf24; --line:#22304a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text); overflow:hidden;
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  canvas{display:block; touch-action:none}
+  #wrap{position:fixed; inset:0}
+
+  .screen{
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:0;
+    padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));
+    text-align:center; z-index:5;
+  }
+  .hidden{display:none !important}
+
+  h1{font-size:clamp(34px,9vw,56px); margin:0 0 6px; font-weight:700; letter-spacing:-0.5px}
+  .sub{color:var(--muted); font-size:clamp(13px,3.4vw,15px); margin-bottom:26px}
+
+  .cards{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; width:100%; max-width:620px}
+  .card{
+    flex:1 1 250px; min-width:0; max-width:290px;
+    background:rgba(8,14,24,.72); border:1.5px solid var(--line); border-radius:16px;
+    padding:22px 20px; cursor:pointer; transition:border-color .15s, background .15s, transform .12s;
+  }
+  .card:active{transform:scale(.985)}
+  .card .glyph{font-size:28px; line-height:1; margin-bottom:8px}
+  .card h2{margin:0; font-size:21px}
+  .card p{margin:10px 0 0; color:var(--muted); font-size:12.5px; line-height:1.45}
+  .card .best{margin-top:14px; font-size:11.5px; font-weight:700; letter-spacing:.4px}
+  .card.c2{border-color:rgba(74,222,128,.55)} .card.c2 .glyph,.card.c2 .best{color:var(--accent)}
+  .card.c3{border-color:rgba(127,178,255,.55)} .card.c3 .glyph,.card.c3 .best{color:var(--sky)}
+  .card.c2:hover{background:rgba(16,27,42,.95)} .card.c3:hover{background:rgba(16,27,42,.95)}
+
+  .tip{margin-top:30px; color:var(--muted); font-size:11.5px; line-height:1.7}
+  kbd{background:#101b2a; border:1px solid var(--line); border-radius:4px; padding:1px 5px; font:inherit; font-size:11px}
+
+  /* in-game chrome */
+  #hud{position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between;
+       align-items:center; gap:10px;
+       padding:calc(8px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 0
+               max(12px,env(safe-area-inset-left));
+       font-size:13px; pointer-events:none; z-index:4}
+  #hud .left{display:flex; align-items:center; gap:10px; min-width:0}
+  #hud .brand{font-weight:700; letter-spacing:.6px; white-space:nowrap}
+  #hud .score{font-variant-numeric:tabular-nums; white-space:nowrap}
+  #hud .score b{font-size:17px; margin-left:5px}
+  #hud .lbl{color:var(--muted); font-size:11px}
+  /* lives in the top bar, clear of the thumb pads at the bottom */
+  #back{pointer-events:auto; background:rgba(10,18,30,.8); border:1px solid var(--line);
+        color:var(--muted); border-radius:10px; padding:7px 11px; font:inherit; font-size:12px;
+        cursor:pointer; white-space:nowrap}
+  #back:active{background:rgba(40,60,88,.95)}
+
+  @media (max-width:520px){
+    #hud{font-size:11.5px}
+    #hud .brand{font-size:11.5px}
+    #hud .score b{font-size:15px}
+    #hud .lbl{font-size:10px}
+    .btn{width:56px; height:56px; font-size:19px}
+    .btn.wide{padding:0 14px; font-size:12px}
+  }
+  @media (max-height:460px){
+    .btn{width:48px; height:48px; font-size:17px}
+  }
+
+  /* touch pads */
+  #pad{position:fixed; inset:auto 0 0 0; z-index:6; display:none;
+       padding:0 14px calc(14px + env(safe-area-inset-bottom)); pointer-events:none}
+  #pad .row{display:flex; justify-content:space-between; align-items:flex-end; gap:12px}
+  .btn{pointer-events:auto; width:64px; height:64px; border-radius:50%;
+       background:rgba(16,27,42,.82); border:1.5px solid var(--line); color:var(--text);
+       font-size:22px; display:flex; align-items:center; justify-content:center;
+       cursor:pointer; touch-action:none}
+  .btn:active{background:rgba(40,60,88,.95)}
+  .btn.wide{width:auto; padding:0 18px; border-radius:32px; font-size:13px; letter-spacing:.5px}
+  .stack{display:flex; flex-direction:column; gap:10px; align-items:center}
+  .pair{display:flex; gap:10px}
+
+  #toast{position:fixed; left:50%; transform:translateX(-50%); z-index:7;
+         top:38%; font-size:26px; font-weight:700; pointer-events:none; opacity:0}
+
+  #over{position:fixed; inset:0; z-index:8; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; background:rgba(2,5,11,.72); text-align:center; padding:24px}
+  #over h2{font-size:clamp(26px,7vw,38px); margin:0 0 6px}
+  #over .big{font-size:54px; font-weight:700; color:var(--accent); line-height:1.1}
+  #over .row{margin-top:18px; color:var(--muted); font-size:13px}
+  .pill{margin-top:18px; background:var(--accent); color:#06231a; border:0; border-radius:22px;
+        padding:12px 26px; font:inherit; font-weight:700; font-size:13.5px; letter-spacing:.6px; cursor:pointer}
+  .pill.ghost{background:transparent; color:var(--muted); border:1px solid var(--line); margin-left:10px}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv"></canvas></div>
+
+<!-- ---------- menu ---------- -->
+<div id="menu" class="screen">
+  <h1>What's up?</h1>
+  <div class="sub">Two snakes. Take your pick.</div>
+  <div class="cards">
+    <div class="card c2" data-game="2">
+      <div class="glyph">&#9632;</div>
+      <h2>Snake 2D</h2>
+      <p>The flat board. Apples, gold bonuses, edges that wrap right round.</p>
+      <div class="best" id="best2">not played yet</div>
+    </div>
+    <div class="card c3" data-game="3">
+      <div class="glyph">&#10022;</div>
+      <h2>Snake 3D</h2>
+      <p>Endless night sky. Fly free, eat blocks, glide over your own tail.</p>
+      <div class="best" id="best3">not played yet</div>
+    </div>
+  </div>
+  <div class="tip">
+    Tap a card to play &middot; on a keyboard use <kbd>&larr;</kbd> <kbd>&rarr;</kbd> and <kbd>Enter</kbd><br>
+    <span id="installTip"></span>
+  </div>
+</div>
+
+<!-- ---------- in-game ---------- -->
+<div id="hud" class="hidden">
+  <div class="left">
+    <button id="back">&larr; menu</button>
+    <div class="brand" id="brand">SNAKE</div>
+  </div>
+  <div class="score"><span class="lbl">SCORE</span><b id="scoreN">0</b>
+    <span class="lbl" style="margin-left:14px">BEST</span><b id="bestN">0</b></div>
+</div>
+<div id="pad"></div>
+<div id="toast"></div>
+
+<div id="over" class="hidden">
+  <h2 id="overTitle">Game over</h2>
+  <div class="lbl" style="color:var(--muted);font-size:11.5px;margin-top:14px">SCORE</div>
+  <div class="big" id="overScore">0</div>
+  <div class="row" id="overRow"></div>
+  <div>
+    <button class="pill" id="again">PLAY AGAIN</button>
+    <button class="pill ghost" id="toMenu">MENU</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+//=====================================================================
+// Snake, two ways. One page, no dependencies, runs anywhere with a
+// browser -- phone, tablet, laptop -- and installs to the home screen.
+//=====================================================================
+
+// Anything that throws would otherwise leave a black screen with no clue,
+// so paint the message where it can be seen.
+window.onerror = function (msg, src, line, col) {
+  try {
+    var c = document.getElementById('cv'), x = c.getContext('2d');
+    x.setTransform(1,0,0,1,0,0);
+    x.fillStyle = '#300'; x.fillRect(0,0,c.width,c.height);
+    x.fillStyle = '#fff'; x.font = '14px monospace';
+    x.fillText('Error: ' + msg, 16, 40);
+    x.fillText('at ' + src + ':' + line + ':' + col, 16, 62);
+  } catch (e) {}
+};
+
+var cv = document.getElementById('cv'), g = cv.getContext('2d');
+var W = 0, H = 0, DPR = 1;
+var menuEl = document.getElementById('menu'), hudEl = document.getElementById('hud');
+var backEl = document.getElementById('back'), padEl = document.getElementById('pad');
+var overEl = document.getElementById('over'), toastEl = document.getElementById('toast');
+var scoreN = document.getElementById('scoreN'), bestN = document.getElementById('bestN');
+
+// Measure the viewport itself. clientWidth would inherit any horizontal
+// overflow the page happens to have, which silently made the board too wide.
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = Math.round(window.innerWidth); H = Math.round(window.innerHeight);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+function best(k) { var v = parseInt(store(k) || '0', 10); return isNaN(v) ? 0 : v; }
+function setBest(k, v) { if (v > best(k)) store(k, String(v)); }
+
+var mode = 'menu';           // 'menu' | 'g2' | 'g3'
+var game = null;
+
+function showMenu() {
+  mode = 'menu'; game = null;
+  menuEl.classList.remove('hidden');
+  hudEl.classList.add("hidden");
+  overEl.classList.add('hidden'); padEl.style.display = 'none';
+  padEl.innerHTML = '';
+  document.getElementById('best2').textContent = best('snake2d') ? 'BEST  ' + best('snake2d') : 'not played yet';
+  document.getElementById('best3').textContent = best('snake3d') ? 'BEST  ' + best('snake3d') : 'not played yet';
+  g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0, 0, W, H);
+  drawMenuBackdrop();
+}
+
+function startGame(which) {
+  menuEl.classList.add('hidden'); overEl.classList.add('hidden');
+  hudEl.classList.remove("hidden");
+  document.getElementById('brand').textContent = which === 2 ? 'SNAKE 2D' : 'SNAKE 3D';
+  document.getElementById('brand').style.color = which === 2 ? 'var(--accent)' : 'var(--sky)';
+  mode = which === 2 ? 'g2' : 'g3';
+  game = which === 2 ? new Game2() : new Game3();
+  buildPad(which);
+  bestN.textContent = best(which === 2 ? 'snake2d' : 'snake3d');
+  scoreN.textContent = '0';
+}
+
+//---------------------------------------------------------------------
+// touch pads
+//---------------------------------------------------------------------
+function padButton(label, onDown, onUp, cls) {
+  var b = document.createElement('div');
+  b.className = 'btn' + (cls ? ' ' + cls : '');
+  b.textContent = label;
+  var press = function (e) { e.preventDefault(); onDown && onDown(); };
+  var rel = function (e) { e.preventDefault(); onUp && onUp(); };
+  b.addEventListener('touchstart', press, {passive:false});
+  b.addEventListener('touchend', rel, {passive:false});
+  b.addEventListener('touchcancel', rel, {passive:false});
+  b.addEventListener('mousedown', press);
+  b.addEventListener('mouseup', rel);
+  b.addEventListener('mouseleave', rel);
+  return b;
+}
+
+function buildPad(which) {
+  padEl.innerHTML = '';
+  var row = document.createElement('div'); row.className = 'row';
+
+  if (which === 2) {
+    // one flat row, so the board keeps as much height as possible
+    row.style.justifyContent = 'center';
+    var four = document.createElement('div'); four.className = 'pair';
+    four.appendChild(padButton('←', function () { game.turn(-1, 0); }));
+    four.appendChild(padButton('↑', function () { game.turn(0, -1); }));
+    four.appendChild(padButton('↓', function () { game.turn(0, 1); }));
+    four.appendChild(padButton('→', function () { game.turn(1, 0); }));
+    row.appendChild(four);
+  } else {
+    var climb = document.createElement('div'); climb.className = 'stack';
+    climb.appendChild(padButton('↑', function () { game.queue(2); }));
+    climb.appendChild(padButton('↓', function () { game.queue(3); }));
+    var right = document.createElement('div'); right.className = 'stack';
+    right.appendChild(padButton('BOOST', function () { game.boost = true; }, function () { game.boost = false; }, 'wide'));
+    var bank = document.createElement('div'); bank.className = 'pair';
+    bank.appendChild(padButton('←', function () { game.queue(0); }));
+    bank.appendChild(padButton('→', function () { game.queue(1); }));
+    right.appendChild(bank);
+    row.appendChild(climb);
+    row.appendChild(right);
+  }
+  padEl.appendChild(row);
+  padEl.style.display = 'block';
+}
+
+//---------------------------------------------------------------------
+// input
+//---------------------------------------------------------------------
+var menuPick = 0;
+document.querySelectorAll('.card').forEach(function (c) {
+  c.addEventListener('click', function () { startGame(parseInt(c.dataset.game, 10)); });
+});
+backEl.addEventListener('click', showMenu);
+document.getElementById('toMenu').addEventListener('click', showMenu);
+document.getElementById('again').addEventListener('click', function () {
+  startGame(mode === 'g2' ? 2 : 3);
+});
+
+window.addEventListener('keydown', function (e) {
+  var k = e.key;
+  if (mode === 'menu') {
+    if (k === 'ArrowLeft' || k === 'a') { menuPick = 0; markPick(); }
+    else if (k === 'ArrowRight' || k === 'd') { menuPick = 1; markPick(); }
+    else if (k === 'Enter' || k === ' ') startGame(menuPick === 0 ? 2 : 3);
+    else if (k === '1') startGame(2);
+    else if (k === '2') startGame(3);
+    else return;
+    e.preventDefault(); return;
+  }
+  if (!overEl.classList.contains('hidden')) {
+    if (k === 'Enter') { startGame(mode === 'g2' ? 2 : 3); e.preventDefault(); }
+    else if (k === 'Escape') { showMenu(); e.preventDefault(); }
+    return;
+  }
+  if (k === 'Escape') { showMenu(); e.preventDefault(); return; }
+  if (game && game.key) { if (game.key(k, true)) e.preventDefault(); }
+});
+window.addEventListener('keyup', function (e) {
+  if (game && game.key) game.key(e.key, false);
+});
+function markPick() {
+  var cs = document.querySelectorAll('.card');
+  cs.forEach(function (c, i) { c.style.background = i === menuPick ? 'rgba(16,27,42,.95)' : ''; });
+}
+
+// swipe, for the flat board
+var tsx = 0, tsy = 0, tst = 0;
+cv.addEventListener('touchstart', function (e) {
+  var t = e.changedTouches[0]; tsx = t.clientX; tsy = t.clientY; tst = Date.now();
+}, {passive:true});
+cv.addEventListener('touchend', function (e) {
+  if (mode !== 'g2' || !game) return;
+  var t = e.changedTouches[0], dx = t.clientX - tsx, dy = t.clientY - tsy;
+  if (Date.now() - tst > 700) return;
+  if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+  if (Math.abs(dx) > Math.abs(dy)) game.turn(dx > 0 ? 1 : -1, 0);
+  else game.turn(0, dy > 0 ? 1 : -1);
+}, {passive:true});
+
+//---------------------------------------------------------------------
+// shared bits
+//---------------------------------------------------------------------
+function toast(text, gold) {
+  toastEl.textContent = text;
+  toastEl.style.color = gold ? 'var(--gold)' : 'var(--text)';
+  toastEl.style.fontSize = (gold ? 30 : 25) + 'px';
+  toastEl.style.transition = 'none';
+  toastEl.style.opacity = '1';
+  toastEl.style.top = '40%';
+  requestAnimationFrame(function () {
+    toastEl.style.transition = 'opacity 1.1s ease-out, top 1.1s ease-out';
+    toastEl.style.opacity = '0';
+    toastEl.style.top = '28%';
+  });
+}
+
+function gameOver(title, score, rowText, key) {
+  setBest(key, score);
+  document.getElementById('overTitle').textContent = title;
+  document.getElementById('overScore').textContent = score;
+  document.getElementById('overRow').textContent = rowText;
+  overEl.classList.remove('hidden');
+}
+
+function lerpHex(a, b, t) {
+  var pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  var r = Math.round((pa >> 16) + (((pb >> 16) - (pa >> 16)) * t));
+  var gg = Math.round(((pa >> 8) & 255) + ((((pb >> 8) & 255) - ((pa >> 8) & 255)) * t));
+  var bl = Math.round((pa & 255) + (((pb & 255) - (pa & 255)) * t));
+  return 'rgb(' + r + ',' + gg + ',' + bl + ')';
+}
+
+function roundRect(x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+//=====================================================================
+// SNAKE 2D -- the flat board. Edges wrap; biting yourself ends it.
+//=====================================================================
+function Game2() {
+  this.cols = 24; this.rows = 24;
+  this.snake = [{x:6,y:12},{x:5,y:12},{x:4,y:12}];
+  this.dir = {x:1,y:0}; this.last = {x:1,y:0}; this.q = [];
+  this.score = 0; this.apples = 0; this.grow = 0;
+  this.food = null; this.bonus = null; this.bonusLeft = 0;
+  this.step = 0.13; this.acc = 0; this.dead = false;
+  this.placeFood();
+}
+Game2.prototype.turn = function (x, y) { if (this.q.length < 3) this.q.push({x:x,y:y}); };
+Game2.prototype.key = function (k, down) {
+  if (!down) return false;
+  if (k === 'ArrowUp' || k === 'w') { this.turn(0,-1); return true; }
+  if (k === 'ArrowDown' || k === 's') { this.turn(0,1); return true; }
+  if (k === 'ArrowLeft' || k === 'a') { this.turn(-1,0); return true; }
+  if (k === 'ArrowRight' || k === 'd') { this.turn(1,0); return true; }
+  return false;
+};
+Game2.prototype.occupied = function (p) {
+  for (var i = 0; i < this.snake.length; i++)
+    if (this.snake[i].x === p.x && this.snake[i].y === p.y) return true;
+  return false;
+};
+Game2.prototype.placeFood = function () {
+  var p, n = 0;
+  do { p = {x:(Math.random()*this.cols)|0, y:(Math.random()*this.rows)|0}; }
+  while (this.occupied(p) && ++n < 400);
+  this.food = p;
+};
+Game2.prototype.placeBonus = function () {
+  var p, n = 0;
+  do { p = {x:(Math.random()*this.cols)|0, y:(Math.random()*this.rows)|0}; }
+  while ((this.occupied(p) || (p.x===this.food.x && p.y===this.food.y)) && ++n < 400);
+  this.bonus = p; this.bonusLeft = 45;
+};
+Game2.prototype.tick = function () {
+  while (this.q.length) {
+    var c = this.q.shift();
+    if (c.x === -this.last.x && c.y === -this.last.y) continue;
+    this.dir = c; break;
+  }
+  this.last = this.dir;
+  var h = this.snake[0];
+  // no walls: the board wraps in both axes
+  var nh = {x:((h.x + this.dir.x) % this.cols + this.cols) % this.cols,
+            y:((h.y + this.dir.y) % this.rows + this.rows) % this.rows};
+
+  var limit = this.snake.length - (this.grow > 0 ? 0 : 1);
+  for (var i = 0; i < limit; i++)
+    if (this.snake[i].x === nh.x && this.snake[i].y === nh.y) {
+      this.dead = true;
+      gameOver('You bit yourself', this.score,
+               'Length ' + this.snake.length + '  ·  ' + this.apples + ' apples', 'snake2d');
+      return;
+    }
+
+  this.snake.unshift(nh);
+  if (nh.x === this.food.x && nh.y === this.food.y) {
+    this.score++; this.apples++; this.grow += 2;
+    this.placeFood();
+    if (this.apples % 5 === 0 && !this.bonus) this.placeBonus();
+    this.step = Math.max(0.062, 0.13 - this.apples * 0.0032);
+    toast(['yum!','nom nom','tasty!','mmm!','crunch!'][(Math.random()*5)|0], false);
+  } else if (this.bonus && nh.x === this.bonus.x && nh.y === this.bonus.y) {
+    this.score += 5; this.grow += 3; this.bonus = null;
+    toast('jackpot!', true);
+  }
+  if (this.grow > 0) this.grow--; else this.snake.pop();
+  if (this.bonus && --this.bonusLeft <= 0) this.bonus = null;
+  scoreN.textContent = this.score;
+  setBest('snake2d', this.score);
+  bestN.textContent = best('snake2d');
+};
+Game2.prototype.update = function (dt) {
+  if (this.dead) return;
+  this.acc += dt;
+  var guard = 0;
+  while (this.acc >= this.step && !this.dead && guard++ < 6) { this.acc -= this.step; this.tick(); }
+};
+Game2.prototype.draw = function (t) {
+  g.clearRect(0, 0, W, H);
+  // keep clear of the top bar and the thumb pad along the bottom
+  var top = 46, bottom = padEl.offsetHeight ? padEl.offsetHeight + 12 : 24, side = 12;
+  var cell = Math.floor(Math.min((W - side*2) / this.cols, (H - top - bottom) / this.rows));
+  cell = Math.max(cell, 4);
+  var bw = cell * this.cols, bh = cell * this.rows;
+  var ox = Math.round((W - bw) / 2), oy = Math.round(top + (H - top - bottom - bh) / 2);
+  if (location.search.indexOf('dbg') >= 0) {
+    g.fillStyle = '#ff0'; g.font = '12px monospace';
+    g.fillText('W=' + W + ' H=' + H + ' dpr=' + DPR + ' cell=' + cell +
+               ' bw=' + bw + ' ox=' + ox + ' pad=' + padEl.offsetHeight +
+               ' cvW=' + cv.width, 8, H - 6);
+  }
+
+  g.fillStyle = '#15202d'; roundRect(ox - 6, oy - 6, bw + 12, bh + 12, 14); g.fill();
+  g.strokeStyle = '#243345'; g.lineWidth = 1.5; g.stroke();
+  g.fillStyle = '#182534';
+  for (var y = 0; y < this.rows; y++)
+    for (var x = 0; x < this.cols; x++)
+      if (((x + y) & 1) === 0) g.fillRect(ox + x*cell, oy + y*cell, cell, cell);
+
+  var pulse = 1 + 0.1 * Math.sin(t * 5);
+  if (this.food) {
+    var r = cell * 0.34 * pulse;
+    var fx = ox + this.food.x*cell + cell/2, fy = oy + this.food.y*cell + cell/2;
+    var gr = g.createRadialGradient(fx - r*0.3, fy - r*0.3, r*0.1, fx, fy, r);
+    gr.addColorStop(0, '#ff9a9a'); gr.addColorStop(1, '#dc2626');
+    g.fillStyle = gr; g.beginPath(); g.arc(fx, fy, r, 0, 6.284); g.fill();
+  }
+  if (this.bonus) {
+    var bx = ox + this.bonus.x*cell + cell/2, by = oy + this.bonus.y*cell + cell/2;
+    var s = cell * 0.36 * (0.75 + 0.25 * Math.min(1, this.bonusLeft/20));
+    g.save(); g.translate(bx, by); g.rotate(t * 1.6);
+    g.fillStyle = '#fbbf24';
+    g.beginPath(); g.moveTo(0,-s); g.lineTo(s,0); g.lineTo(0,s); g.lineTo(-s,0); g.closePath(); g.fill();
+    g.restore();
+  }
+
+  for (var i = this.snake.length - 1; i >= 0; i--) {
+    var k = this.snake.length <= 1 ? 0 : i / (this.snake.length - 1);
+    var sp = this.snake[i];
+    g.fillStyle = i === 0 ? '#6ee7a0' : lerpHex('#34d399', '#0e9f6e', k);
+    var inset = i === 0 ? cell*0.05 : cell*0.1;
+    roundRect(ox + sp.x*cell + inset, oy + sp.y*cell + inset,
+              cell - inset*2, cell - inset*2, cell*0.3);
+    g.fill();
+    if (i === 0) {
+      g.fillStyle = '#0b1118';
+      var cx2 = ox + sp.x*cell + cell/2, cy2 = oy + sp.y*cell + cell/2;
+      var fx2 = this.dir.x, fy2 = this.dir.y, px = -fy2, py = fx2, er = Math.max(1.4, cell*0.1);
+      for (var s2 = -1; s2 <= 1; s2 += 2) {
+        g.beginPath();
+        g.arc(cx2 + fx2*cell*0.2 + px*cell*0.19*s2, cy2 + fy2*cell*0.2 + py*cell*0.19*s2, er, 0, 6.284);
+        g.fill();
+      }
+    }
+  }
+};
+
+//=====================================================================
+// SNAKE 3D -- endless night sky, free flight, nothing to lose.
+// Rendered by hand: project, sort back-to-front, paint.
+//=====================================================================
+var GRAB = 1, CHUNK = 44, VIEW = 90, MAXLEN = 160, HOP = 1.35;
+
+function hash3(x, y, z) {
+  var h = 2166136261;
+  h = Math.imul(h ^ (x|0), 16777619);
+  h = Math.imul(h ^ (y|0), 16777619);
+  h = Math.imul(h ^ (z|0), 16777619);
+  h ^= h >>> 13; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 16;
+  return h >>> 0;
+}
+function floorDiv(a, b) { return Math.floor(a / b); }
+
+function Game3() {
+  this.snake = [];
+  for (var i = 0; i < 3; i++) this.snake.push({x:-i, y:0, z:0, lx:0, ly:0, lz:0});
+  this.prev = this.snake.map(function (s) { return {x:s.x,y:s.y,z:s.z,lx:s.lx,ly:s.ly,lz:s.lz}; });
+  this.fwd = {x:1,y:0,z:0}; this.up = {x:0,y:1,z:0};
+  this.q = []; this.score = 0; this.eaten = 0; this.grow = 0;
+  this.step = 0.16; this.acc = 0; this.boost = false;
+  this.eatenChunks = {};
+  this.foods = []; this.rocks = [];
+  this.cam = null;
+  // a fixed bowl of stars, drawn as directions so they never come closer
+  this.stars = [];
+  var rs = 12345;
+  function rnd() { rs = (rs * 1103515245 + 12345) & 0x7fffffff; return rs / 0x7fffffff; }
+  for (var s = 0; s < 420; s++) {
+    var th = rnd() * 6.2832, ph = Math.acos(2 * rnd() - 1);
+    this.stars.push({x:Math.sin(ph)*Math.cos(th), y:Math.cos(ph), z:Math.sin(ph)*Math.sin(th),
+                     s: rnd() < 0.18 ? 2.1 : 1.1, a: 0.35 + rnd()*0.65});
+  }
+  this.refresh();
+}
+Game3.prototype.queue = function (t) { if (this.q.length < 2) this.q.push(t); };
+Game3.prototype.key = function (k, down) {
+  if (k === 'Shift') { this.boost = down; return true; }
+  if (!down) return false;
+  if (k === 'ArrowLeft' || k === 'a') { this.queue(0); return true; }
+  if (k === 'ArrowRight' || k === 'd') { this.queue(1); return true; }
+  if (k === 'ArrowUp' || k === 'w') { this.queue(2); return true; }
+  if (k === 'ArrowDown' || k === 's') { this.queue(3); return true; }
+  return false;
+};
+function cross(a, b) {
+  return {x:a.y*b.z - a.z*b.y, y:a.z*b.x - a.x*b.z, z:a.x*b.y - a.y*b.x};
+}
+Game3.prototype.applyTurn = function (t) {
+  var r = cross(this.fwd, this.up), f = this.fwd;
+  if (t === 0) this.fwd = {x:-r.x,y:-r.y,z:-r.z};
+  else if (t === 1) this.fwd = r;
+  else if (t === 2) { this.fwd = this.up; this.up = {x:-f.x,y:-f.y,z:-f.z}; }
+  else { this.fwd = {x:-this.up.x,y:-this.up.y,z:-this.up.z}; this.up = f; }
+};
+// One block per chunk, straight from the hash -- so the world is fixed,
+// nothing appears out of thin air, and what you flew past is still there.
+Game3.prototype.foodInChunk = function (cx, cy, cz) {
+  var h1 = hash3(cx, cy, cz), h2 = hash3(cx + 7919, cy + 104729, cz + 1299709);
+  return {
+    x: cx*CHUNK + h1 % CHUNK,
+    y: cy*CHUNK + ((h1 >>> 11) % CHUNK),
+    z: cz*CHUNK + h2 % CHUNK,
+    gold: ((h2 >>> 13) % 6) === 0,
+    phase: ((h2 >>> 19) % 628) / 100,
+    key: cx + ',' + cy + ',' + cz
+  };
+};
+Game3.prototype.refresh = function () {
+  this.foods.length = 0; this.rocks.length = 0;
+  var h = this.snake[0];
+  var cx = floorDiv(h.x, CHUNK), cy = floorDiv(h.y, CHUNK), cz = floorDiv(h.z, CHUNK);
+  var r = Math.ceil(VIEW / CHUNK) + 1;
+  for (var ix = cx - r; ix <= cx + r; ix++)
+    for (var iy = cy - r; iy <= cy + r; iy++)
+      for (var iz = cz - r; iz <= cz + r; iz++) {
+        var key = ix + ',' + iy + ',' + iz;
+        if (!this.eatenChunks[key]) {
+          var f = this.foodInChunk(ix, iy, iz);
+          if (dist3(f, h) <= VIEW) this.foods.push(f);
+        }
+        var hr = hash3(ix + 31337, iy + 6971, iz + 15485863);
+        if (hr % 100 < 62) {
+          var bx = ix*CHUNK + ((hr >>> 3) % CHUNK),
+              by = iy*CHUNK + ((hr >>> 11) % CHUNK),
+              bz = iz*CHUNK + ((hr >>> 19) % CHUNK);
+          var n = 3 + ((hr >>> 27) % 5);
+          for (var k = 0; k < n; k++) {
+            var hk = hash3(bx + k*977, by + k*1049, bz + k*1193);
+            var rc = {x: bx + (hk % 5) - 2, y: by + ((hk >>> 7) % 5) - 2, z: bz + ((hk >>> 14) % 5) - 2,
+                      s: 1.1 + (hk % 60) / 100};
+            if (dist3(rc, h) <= VIEW) this.rocks.push(rc);
+          }
+        }
+      }
+};
+function dist3(a, b) {
+  var dx = a.x-b.x, dy = a.y-b.y, dz = a.z-b.z;
+  return Math.sqrt(dx*dx + dy*dy + dz*dz);
+}
+function cheb(a, b) {
+  return Math.max(Math.abs(a.x-b.x), Math.max(Math.abs(a.y-b.y), Math.abs(a.z-b.z)));
+}
+Game3.prototype.inTheWay = function (c) {
+  for (var i = 1; i < this.snake.length; i++) {
+    var s = this.snake[i];
+    if (s.x === c.x && s.y === c.y && s.z === c.z) return true;
+  }
+  for (var r = 0; r < this.rocks.length; r++) {
+    var k = this.rocks[r];
+    if (k.x === c.x && k.y === c.y && k.z === c.z) return true;
+  }
+  return false;
+};
+Game3.prototype.tick = function () {
+  if (this.q.length) this.applyTurn(this.q.shift());
+  var h = this.snake[0], f = this.fwd;
+  var nh = {x:h.x + f.x, y:h.y + f.y, z:h.z + f.z};
+
+  // start climbing before the obstruction arrives, not after
+  var a1 = {x:nh.x+f.x, y:nh.y+f.y, z:nh.z+f.z};
+  var a2 = {x:a1.x+f.x, y:a1.y+f.y, z:a1.z+f.z};
+  var blocked = this.inTheWay(nh) || this.inTheWay(a1) || this.inTheWay(a2);
+  var wx = blocked ? this.up.x*HOP : 0, wy = blocked ? this.up.y*HOP : 0, wz = blocked ? this.up.z*HOP : 0;
+
+  this.prev = this.snake.map(function (s) { return {x:s.x,y:s.y,z:s.z,lx:s.lx,ly:s.ly,lz:s.lz}; });
+  this.snake.unshift({x:nh.x, y:nh.y, z:nh.z,
+    lx: h.lx + (wx - h.lx) * 0.55, ly: h.ly + (wy - h.ly) * 0.55, lz: h.lz + (wz - h.lz) * 0.55});
+
+  var hit = -1, hd = 1e9;
+  for (var i = 0; i < this.foods.length; i++) {
+    var d = cheb(this.foods[i], nh);
+    if (d <= GRAB && d < hd) { hit = i; hd = d; }
+  }
+  if (hit >= 0) {
+    var fd = this.foods[hit];
+    this.score += fd.gold ? 5 : 1; this.eaten++;
+    this.grow += fd.gold ? 3 : 2;
+    this.eatenChunks[fd.key] = 1;
+    this.step = Math.max(0.082, 0.16 - this.eaten * 0.0032);
+    toast(fd.gold ? ['jackpot!','shiny!','gold!','treasure!'][(Math.random()*4)|0]
+                  : ['yum!','nom nom','tasty!','mmm!','om nom','crunch!'][(Math.random()*6)|0], fd.gold);
+    scoreN.textContent = this.score;
+    setBest('snake3d', this.score);
+    bestN.textContent = best('snake3d');
+  }
+  if (this.snake.length > MAXLEN) this.grow = 0;
+  if (this.grow > 0) this.grow--; else this.snake.pop();
+  this.refresh();
+};
+Game3.prototype.update = function (dt) {
+  this.acc += dt * (this.boost ? 1.9 : 1);
+  var guard = 0;
+  while (this.acc >= this.step && guard++ < 6) { this.acc -= this.step; this.tick(); }
+  if (this.acc > this.step) this.acc = this.step;
+};
+Game3.prototype.draw = function (t) {
+  var alpha = Math.min(1, this.acc / this.step);
+  var s0 = this.snake[0], p0 = this.prev[0];
+  var hx = p0.x + (s0.x - p0.x) * alpha + p0.lx + (s0.lx - p0.lx) * alpha;
+  var hy = p0.y + (s0.y - p0.y) * alpha + p0.ly + (s0.ly - p0.ly) * alpha;
+  var hz = p0.z + (s0.z - p0.z) * alpha + p0.lz + (s0.lz - p0.lz) * alpha;
+
+  var f = this.fwd, u = this.up;
+  var back = this.boost ? 10.6 : 9.4, high = this.boost ? 3.8 : 4.3;
+  var want = {x: hx - f.x*back + u.x*high, y: hy - f.y*back + u.y*high, z: hz - f.z*back + u.z*high};
+  if (!this.cam) this.cam = {p:want, t:{x:hx,y:hy,z:hz}, u:{x:u.x,y:u.y,z:u.z}};
+  var kp = 0.16, kt = 0.22;
+  var c = this.cam;
+  c.p = {x:c.p.x + (want.x-c.p.x)*kp, y:c.p.y + (want.y-c.p.y)*kp, z:c.p.z + (want.z-c.p.z)*kp};
+  var tgt = {x: hx + f.x*4.4, y: hy + f.y*4.4, z: hz + f.z*4.4};
+  c.t = {x:c.t.x + (tgt.x-c.t.x)*kt, y:c.t.y + (tgt.y-c.t.y)*kt, z:c.t.z + (tgt.z-c.t.z)*kt};
+  c.u = {x:c.u.x + (u.x-c.u.x)*0.2, y:c.u.y + (u.y-c.u.y)*0.2, z:c.u.z + (u.z-c.u.z)*0.2};
+
+  // camera basis
+  var fz = norm({x:c.t.x-c.p.x, y:c.t.y-c.p.y, z:c.t.z-c.p.z});
+  var rx = norm(cross(fz, c.u));
+  var uy = cross(rx, fz);
+  var focal = Math.min(W, H) * 0.9;
+  var cxs = W/2, cys = H/2;
+  var self = this;
+
+  function project(p) {
+    var dx = p.x - c.p.x, dy = p.y - c.p.y, dz = p.z - c.p.z;
+    var zz = dx*fz.x + dy*fz.y + dz*fz.z;
+    if (zz < 0.35) return null;
+    var xx = dx*rx.x + dy*rx.y + dz*rx.z;
+    var yy = dx*uy.x + dy*uy.y + dz*uy.z;
+    return {x: cxs + xx*focal/zz, y: cys - yy*focal/zz, z: zz, s: focal/zz};
+  }
+
+  // ---- sky ----
+  var grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#01030a'); grad.addColorStop(0.55, '#08121f'); grad.addColorStop(1, '#03060e');
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+
+  // stars: direction only, so they never approach
+  for (var i = 0; i < this.stars.length; i++) {
+    var st = this.stars[i];
+    var zz = st.x*fz.x + st.y*fz.y + st.z*fz.z;
+    if (zz < 0.05) continue;
+    var xx = st.x*rx.x + st.y*rx.y + st.z*rx.z;
+    var yy = st.x*uy.x + st.y*uy.y + st.z*uy.z;
+    var sx = cxs + xx*focal/zz, sy = cys - yy*focal/zz;
+    if (sx < -10 || sx > W+10 || sy < -10 || sy > H+10) continue;
+    g.globalAlpha = st.a; g.fillStyle = '#dbe6ff';
+    g.fillRect(sx, sy, st.s, st.s);
+  }
+  g.globalAlpha = 1;
+
+  // ---- gather everything, paint far to near ----
+  var items = [];
+  for (var r2 = 0; r2 < this.rocks.length; r2++) {
+    var rk = this.rocks[r2];
+    var pr = project(rk);
+    if (pr) items.push({z:pr.z, kind:'cube', p:pr, size:rk.s, col:'#3c4a63'});
+  }
+  for (var fi = 0; fi < this.foods.length; fi++) {
+    var fo = this.foods[fi];
+    var pf = project({x:fo.x, y:fo.y + Math.sin(t*3 + fo.phase)*0.09, z:fo.z});
+    if (pf) items.push({z:pf.z, kind:'cube', p:pf, size:fo.gold ? 1.7 : 1.5,
+                        col: fo.gold ? '#fbbf24' : '#f05252', glow:true});
+  }
+  var n = this.snake.length;
+  var pts = [];
+  for (var si = 0; si < n; si++) {
+    var to = this.snake[si], fr = this.prev[Math.min(si, this.prev.length - 1)];
+    var wpt = {
+      x: fr.x + (to.x-fr.x)*alpha + fr.lx + (to.lx-fr.lx)*alpha,
+      y: fr.y + (to.y-fr.y)*alpha + fr.ly + (to.ly-fr.ly)*alpha,
+      z: fr.z + (to.z-fr.z)*alpha + fr.lz + (to.lz-fr.lz)*alpha
+    };
+    pts.push(wpt);
+    var pp = project(wpt);
+    if (!pp) continue;
+    var kk = n <= 1 ? 0 : si/(n-1);
+    items.push({z:pp.z, kind:'ball', p:pp, size: si === 0 ? 0.98 : 0.86 - kk*0.26,
+                col: si === 0 ? '#86efac' : lerpHex('#34d399', '#0a6b48', kk)});
+    if (si > 0) {
+      var mid = {x:(wpt.x+pts[si-1].x)/2, y:(wpt.y+pts[si-1].y)/2, z:(wpt.z+pts[si-1].z)/2};
+      var pm = project(mid);
+      if (pm) items.push({z:pm.z, kind:'ball', p:pm, size:(0.86 - kk*0.26)*0.52,
+                          col: lerpHex('#34d399', '#0a6b48', kk)});
+    }
+  }
+  items.sort(function (a, b) { return b.z - a.z; });
+
+  for (var q = 0; q < items.length; q++) {
+    var it = items[q];
+    var rad = it.size * it.p.s * 0.5;
+    if (rad < 0.4) continue;
+    if (it.kind === 'ball') {
+      var gr2 = g.createRadialGradient(it.p.x - rad*0.35, it.p.y - rad*0.35, rad*0.1,
+                                       it.p.x, it.p.y, rad);
+      gr2.addColorStop(0, lerpHex('#ffffff', it.col, 0.45));
+      gr2.addColorStop(1, it.col);
+      g.fillStyle = gr2;
+      g.beginPath(); g.arc(it.p.x, it.p.y, rad, 0, 6.284); g.fill();
+    } else {
+      g.fillStyle = it.col;
+      g.fillRect(it.p.x - rad, it.p.y - rad, rad*2, rad*2);
+      g.fillStyle = 'rgba(255,255,255,.13)';
+      g.fillRect(it.p.x - rad, it.p.y - rad, rad*2, rad*0.45);
+    }
+  }
+};
+
+function norm(v) {
+  var l = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z) || 1;
+  return {x:v.x/l, y:v.y/l, z:v.z/l};
+}
+
+//---------------------------------------------------------------------
+// menu backdrop + main loop
+//---------------------------------------------------------------------
+var menuStars = [];
+for (var ms = 0; ms < 160; ms++)
+  menuStars.push({x:Math.random(), y:Math.random(), s:Math.random() < 0.15 ? 2.4 : 1.3,
+                  a:0.25 + Math.random()*0.6});
+function drawMenuBackdrop() {
+  var grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#01030a'); grad.addColorStop(0.55, '#08121f'); grad.addColorStop(1, '#03060e');
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  for (var i = 0; i < menuStars.length; i++) {
+    var s = menuStars[i];
+    g.globalAlpha = s.a; g.fillStyle = '#c8d8ff';
+    g.fillRect(s.x * W, s.y * H, s.s, s.s);
+  }
+  g.globalAlpha = 1;
+}
+
+var lastT = 0;
+function frame(ms) {
+  var t = ms / 1000;
+  var dt = Math.min(0.25, t - lastT || 0);
+  lastT = t;
+  // layout can settle after the first paint (and on rotate), so keep the
+  // backing store in step rather than trusting one measurement at startup
+  if (Math.round(window.innerWidth) !== W || Math.round(window.innerHeight) !== H) resize();
+  if (mode === 'menu') drawMenuBackdrop();
+  else if (game) {
+    if (overEl.classList.contains('hidden')) game.update(dt);
+    game.draw(t);
+  }
+  requestAnimationFrame(frame);
+}
+
+resize();
+showMenu();
+markPick();
+requestAnimationFrame(frame);
+
+// #2d / #3d jump straight into a game -- handy as a shortcut, and it is how
+// the build gets checked without a person driving it.
+(function () {
+  function fromHash() {
+    if (location.hash === '#2d') startGame(2);
+    else if (location.hash === '#3d') startGame(3);
+  }
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+
+// install hint, tailored to the device
+(function () {
+  var el = document.getElementById('installTip');
+  var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+  if (standalone) { el.textContent = ''; return; }
+  if (ios) el.innerHTML = 'To install: tap <b>Share</b> then <b>Add to Home Screen</b>';
+  else el.innerHTML = 'To install: use your browser menu &rarr; <b>Install app</b> / <b>Add to Home screen</b>';
+})();
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+}
+</script>
+</body>
+</html>
