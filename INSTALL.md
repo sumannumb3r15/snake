@@ -81,7 +81,7 @@ hosted link above avoids this entirely.
 
 |            | Snake 2D                          | Snake 3D                                  |
 | ---------- | --------------------------------- | ----------------------------------------- |
-| Touch      | arrow buttons, or swipe the board | ◀ ▶ bank, ▲ ▼ climb/dive, BOOST hold      |
+| Touch      | thumb stick, or swipe the board   | thumb stick banks and climbs, BOOST button |
 | Keyboard   | arrows or WASD                    | ← → bank, ↑ ↓ climb/dive, Shift to boost  |
 | Back       | **menu** button, or Esc           | **menu** button, or Esc                   |
 

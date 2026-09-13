@@ -14,7 +14,7 @@ picker; choose a game with the arrow keys and Enter, or click one.
 
   Snake 2D    arrows or WASD          eat apples, gold is worth 5
                                       the edges wrap; biting yourself ends it
-  Snake 3D    left/right  bank        fly near a red block to eat it
+  Snake 3D    left/right  bank        on a phone: thumb stick + BOOST button
               up/down     climb/dive  nothing can end a run - you glide over
               Shift       boost       your own tail and over rocks
 

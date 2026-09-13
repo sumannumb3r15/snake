@@ -78,25 +78,41 @@
     #hud .brand{font-size:11.5px}
     #hud .score b{font-size:15px}
     #hud .lbl{font-size:10px}
-    .btn{width:56px; height:56px; font-size:19px}
-    .btn.wide{padding:0 14px; font-size:12px}
   }
+  /* landscape phones: keep the stick clear of the board */
   @media (max-height:460px){
-    .btn{width:48px; height:48px; font-size:17px}
+    #stick{width:112px; height:112px}
+    #knob{width:50px; height:50px; margin:-25px 0 0 -25px}
+    .btn{width:62px; height:62px; font-size:12px}
+    #pad{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
   }
 
-  /* touch pads */
+  /* thumb controls */
   #pad{position:fixed; inset:auto 0 0 0; z-index:6; display:none;
-       padding:0 14px calc(14px + env(safe-area-inset-bottom)); pointer-events:none}
+       padding:0 20px calc(20px + env(safe-area-inset-bottom)); pointer-events:none}
   #pad .row{display:flex; justify-content:space-between; align-items:flex-end; gap:12px}
-  .btn{pointer-events:auto; width:64px; height:64px; border-radius:50%;
+
+  #stick{position:relative; width:148px; height:148px; border-radius:50%;
+         pointer-events:auto; touch-action:none; flex:none;
+         background:radial-gradient(circle at 50% 45%, rgba(30,47,70,.66), rgba(10,17,28,.5));
+         border:1.5px solid var(--line)}
+  #stick .ring{position:absolute; inset:16px; border-radius:50%;
+               border:1px dashed rgba(124,143,165,.26)}
+  #stick .tick{position:absolute; color:var(--muted); font-size:11px; line-height:1;
+               opacity:.55; pointer-events:none}
+  #knob{position:absolute; left:50%; top:50%; width:64px; height:64px; margin:-32px 0 0 -32px;
+        border-radius:50%; pointer-events:none;
+        background:radial-gradient(circle at 38% 32%, #a8c8ef, #41608d);
+        border:1.5px solid rgba(200,222,255,.45); box-shadow:0 4px 14px rgba(0,0,0,.5);
+        transition:transform .06s linear}
+  #stick.live #knob{transition:none}
+
+  .btn{pointer-events:auto; width:74px; height:74px; border-radius:50%;
        background:rgba(16,27,42,.82); border:1.5px solid var(--line); color:var(--text);
-       font-size:22px; display:flex; align-items:center; justify-content:center;
-       cursor:pointer; touch-action:none}
-  .btn:active{background:rgba(40,60,88,.95)}
-  .btn.wide{width:auto; padding:0 18px; border-radius:32px; font-size:13px; letter-spacing:.5px}
-  .stack{display:flex; flex-direction:column; gap:10px; align-items:center}
-  .pair{display:flex; gap:10px}
+       font-size:13px; font-weight:700; letter-spacing:.5px;
+       display:flex; align-items:center; justify-content:center;
+       cursor:pointer; touch-action:none; flex:none}
+  .btn:active,.btn.on{background:rgba(56,86,126,.95); border-color:rgba(160,195,240,.6)}
 
   #toast{position:fixed; left:50%; transform:translateX(-50%); z-index:7;
          top:38%; font-size:26px; font-weight:700; pointer-events:none; opacity:0}
@@ -203,8 +219,9 @@ function store(k, v) { try { if (v === undefined) return localStorage.getItem(k)
 function best(k) { var v = parseInt(store(k) || '0', 10); return isNaN(v) ? 0 : v; }
 function setBest(k, v) { if (v > best(k)) store(k, String(v)); }
 
-var mode = 'menu';           // 'menu' | 'g2' | 'g3'
+var mode = "menu";           // "menu" | "g2" | "g3"
 var game = null;
+var stick = null;
 
 function showMenu() {
   mode = 'menu'; game = null;
@@ -212,6 +229,7 @@ function showMenu() {
   hudEl.classList.add("hidden");
   overEl.classList.add('hidden'); padEl.style.display = 'none';
   padEl.innerHTML = '';
+  stick = null;
   document.getElementById('best2').textContent = best('snake2d') ? 'BEST  ' + best('snake2d') : 'not played yet';
   document.getElementById('best3').textContent = best('snake3d') ? 'BEST  ' + best('snake3d') : 'not played yet';
   g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0, 0, W, H);
@@ -233,47 +251,145 @@ function startGame(which) {
 //---------------------------------------------------------------------
 // touch pads
 //---------------------------------------------------------------------
-function padButton(label, onDown, onUp, cls) {
+// Pointer events cover mouse and touch alike, and capture keeps a drag alive
+// even when the thumb wanders off the control.
+function padButton(label, onDown, onUp) {
   var b = document.createElement('div');
-  b.className = 'btn' + (cls ? ' ' + cls : '');
+  b.className = 'btn';
   b.textContent = label;
-  var press = function (e) { e.preventDefault(); onDown && onDown(); };
-  var rel = function (e) { e.preventDefault(); onUp && onUp(); };
-  b.addEventListener('touchstart', press, {passive:false});
-  b.addEventListener('touchend', rel, {passive:false});
-  b.addEventListener('touchcancel', rel, {passive:false});
-  b.addEventListener('mousedown', press);
-  b.addEventListener('mouseup', rel);
-  b.addEventListener('mouseleave', rel);
+  var pid = null;
+  b.addEventListener('pointerdown', function (e) {
+    pid = e.pointerId;
+    try { b.setPointerCapture(pid); } catch (err) {}
+    b.classList.add('on');
+    onDown && onDown();
+    e.preventDefault();
+  });
+  var rel = function (e) {
+    if (e.pointerId !== pid) return;
+    pid = null;
+    b.classList.remove('on');
+    onUp && onUp();
+    e.preventDefault();
+  };
+  b.addEventListener('pointerup', rel);
+  b.addEventListener('pointercancel', rel);
   return b;
 }
+
+//---------------------------------------------------------------------
+// Thumb stick. Push it and it fires once straight away, then keeps
+// repeating while held - so a flick turns once and a hold banks round.
+//---------------------------------------------------------------------
+var REPEAT = 0.30;
+
+function Stick(which) {
+  var self = this;
+  this.which = which;
+  this.dir = null;
+  this.timer = 0;
+  this.pid = null;
+
+  var base = document.createElement('div');
+  base.id = 'stick';
+  var ring = document.createElement('div');
+  ring.className = 'ring';
+  base.appendChild(ring);
+
+  // 3D flight is the one that needs saying out loud; up/down on a flat board
+  // explains itself.
+  if (which === 3) {
+    [['climb', 'top'], ['dive', 'bottom']].forEach(function (p) {
+      var tick = document.createElement('div');
+      tick.className = 'tick';
+      tick.textContent = p[0];
+      tick.style.left = '50%';
+      tick.style[p[1]] = '9px';
+      tick.style.transform = 'translateX(-50%)';
+      base.appendChild(tick);
+    });
+  }
+
+  var knob = document.createElement('div');
+  knob.id = 'knob';
+  base.appendChild(knob);
+
+  this.el = base;
+  this.knob = knob;
+
+  base.addEventListener('pointerdown', function (e) {
+    self.pid = e.pointerId;
+    try { base.setPointerCapture(self.pid); } catch (err) {}
+    base.classList.add('live');
+    self.move(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  base.addEventListener('pointermove', function (e) {
+    if (e.pointerId !== self.pid) return;
+    self.move(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  var release = function (e) {
+    if (e.pointerId !== self.pid) return;
+    self.pid = null;
+    base.classList.remove('live');
+    self.dir = null;
+    knob.style.transform = '';
+    e.preventDefault();
+  };
+  base.addEventListener('pointerup', release);
+  base.addEventListener('pointercancel', release);
+}
+
+Stick.prototype.move = function (px, py) {
+  var r = this.el.getBoundingClientRect();
+  var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  var dx = px - cx, dy = py - cy;
+  var max = r.width / 2 - 22;
+  var len = Math.sqrt(dx * dx + dy * dy) || 1;
+  var clamped = Math.min(len, max);
+  this.knob.style.transform = 'translate(' + (dx / len * clamped) + 'px,' +
+                                             (dy / len * clamped) + 'px)';
+
+  // dead zone in the middle, then whichever axis is pushed hardest wins
+  if (len < max * 0.38) { this.dir = null; return; }
+  var d = Math.abs(dx) > Math.abs(dy)
+        ? {x: dx > 0 ? 1 : -1, y: 0}
+        : {x: 0, y: dy > 0 ? 1 : -1};
+  if (!this.dir || d.x !== this.dir.x || d.y !== this.dir.y) {
+    this.dir = d;
+    this.timer = 0;            // fire at once on a new direction
+  }
+};
+
+Stick.prototype.update = function (dt) {
+  if (!this.dir || !game) return;
+  this.timer -= dt;
+  if (this.timer > 0) return;
+  this.timer = REPEAT;
+  var d = this.dir;
+  if (this.which === 2) game.turn(d.x, d.y);
+  else if (d.x < 0) game.queue(0);        // bank left
+  else if (d.x > 0) game.queue(1);        // bank right
+  else if (d.y < 0) game.queue(2);        // climb
+  else game.queue(3);                     // dive
+};
 
 function buildPad(which) {
   padEl.innerHTML = '';
   var row = document.createElement('div'); row.className = 'row';
 
-  if (which === 2) {
-    // one flat row, so the board keeps as much height as possible
-    row.style.justifyContent = 'center';
-    var four = document.createElement('div'); four.className = 'pair';
-    four.appendChild(padButton('←', function () { game.turn(-1, 0); }));
-    four.appendChild(padButton('↑', function () { game.turn(0, -1); }));
-    four.appendChild(padButton('↓', function () { game.turn(0, 1); }));
-    four.appendChild(padButton('→', function () { game.turn(1, 0); }));
-    row.appendChild(four);
+  stick = new Stick(which);
+  row.appendChild(stick.el);
+
+  if (which === 3) {
+    row.appendChild(padButton('BOOST',
+      function () { if (game) game.boost = true; },
+      function () { if (game) game.boost = false; }));
   } else {
-    var climb = document.createElement('div'); climb.className = 'stack';
-    climb.appendChild(padButton('↑', function () { game.queue(2); }));
-    climb.appendChild(padButton('↓', function () { game.queue(3); }));
-    var right = document.createElement('div'); right.className = 'stack';
-    right.appendChild(padButton('BOOST', function () { game.boost = true; }, function () { game.boost = false; }, 'wide'));
-    var bank = document.createElement('div'); bank.className = 'pair';
-    bank.appendChild(padButton('←', function () { game.queue(0); }));
-    bank.appendChild(padButton('→', function () { game.queue(1); }));
-    right.appendChild(bank);
-    row.appendChild(climb);
-    row.appendChild(right);
+    row.appendChild(document.createElement('div'));   // keeps the stick left
   }
+
   padEl.appendChild(row);
   padEl.style.display = 'block';
 }
@@ -820,7 +936,10 @@ function frame(ms) {
   if (Math.round(window.innerWidth) !== W || Math.round(window.innerHeight) !== H) resize();
   if (mode === 'menu') drawMenuBackdrop();
   else if (game) {
-    if (overEl.classList.contains('hidden')) game.update(dt);
+    if (overEl.classList.contains('hidden')) {
+      if (stick) stick.update(dt);
+      game.update(dt);
+    }
     game.draw(t);
   }
   requestAnimationFrame(frame);
@@ -830,6 +949,52 @@ resize();
 showMenu();
 markPick();
 requestAnimationFrame(frame);
+
+// ?sticktest drives the stick through real pointer events and reports what
+// the game actually received. A screenshot shows the stick is drawn; only
+// this shows it is wired up.
+if (location.search.indexOf('sticktest') >= 0) {
+  setTimeout(function () {
+    var out = [];
+    function check(name, push, expect) {
+      startGame(3);
+      var r = stick.el.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      var opts = {pointerId: 1, bubbles: true, clientX: cx, clientY: cy};
+      stick.el.dispatchEvent(new PointerEvent('pointerdown', opts));
+      stick.el.dispatchEvent(new PointerEvent('pointermove', {
+        pointerId: 1, bubbles: true,
+        clientX: cx + push[0] * r.width * 0.45,
+        clientY: cy + push[1] * r.height * 0.45
+      }));
+      game.q.length = 0;
+      stick.update(1);                       // long enough to fire
+      var got = game.q.length ? game.q[0] : 'nothing';
+      stick.el.dispatchEvent(new PointerEvent('pointerup', opts));
+      out.push(name + ': ' + (got === expect ? 'PASS' : 'FAIL got ' + got));
+    }
+    check('push left', [-1, 0], 0);
+    check('push right', [1, 0], 1);
+    check('push up', [0, -1], 2);
+    check('push down', [0, 1], 3);
+
+    // centre must do nothing at all
+    startGame(3);
+    var r = stick.el.getBoundingClientRect();
+    stick.el.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 1, bubbles: true,
+      clientX: r.left + r.width / 2, clientY: r.top + r.height / 2}));
+    game.q.length = 0;
+    stick.update(1);
+    out.push('dead zone: ' + (game.q.length === 0 ? 'PASS' : 'FAIL fired ' + game.q[0]));
+
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99;background:#000;' +
+                        'color:#0f0;font:13px monospace;padding:10px;white-space:pre';
+    box.textContent = out.join('\n');
+    document.body.appendChild(box);
+  }, 400);
+}
 
 // #2d / #3d jump straight into a game -- handy as a shortcut, and it is how
 // the build gets checked without a person driving it.

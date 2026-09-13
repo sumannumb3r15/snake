@@ -30,7 +30,7 @@ you flew past is in exactly the same place when you come back for it.
 |          | Snake 2D                    | Snake 3D                                      |
 | -------- | --------------------------- | --------------------------------------------- |
 | Keyboard | arrows or WASD              | left/right bank, up/down climb-dive, Shift boost |
-| Touch    | arrow buttons, or swipe     | on-screen bank / climb / boost pads           |
+| Touch    | thumb stick, or swipe       | thumb stick to bank and climb, BOOST button   |
 | Back     | Esc, or the **menu** button | Esc, or the **menu** button                   |
 
 `#2d` and `#3d` on the end of the URL jump straight into a game.
