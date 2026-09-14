@@ -57,14 +57,6 @@ namespace Snake3D
         public double Phase;
     }
 
-    // One bead of the snake: the cell it sits in, plus a sideways lift used to
-    // ride up over whatever is in the way. The lift travels down the body with
-    // the bead, so the whole snake follows the same arc.
-    internal struct Seg
-    {
-        public C3 Cell;
-        public Vector3D Lift;
-    }
 
     internal sealed class Particle
     {
@@ -161,15 +153,20 @@ namespace Snake3D
         private const int ChunkSize = 44;
         private const double MarkerRange = 65.0;
 
-        // Lining up on three axes at once is hard, so a block is taken by
-        // passing within this many cells of it on every axis.
-        private const int GrabRadius = 1;
-        private const int GoldOneIn = 6;
-        private const int MaxLength = 260;
-        private const int MaxParticles = 260;
+        // Free flight, not a grid. The snake holds a continuous heading and
+        // banks gradually while a direction is held, so it can end up pointing
+        // anywhere at all - diagonals included - rather than snapping between
+        // six axes.
+        private const double TurnRate = 2.0;    // radians per second of banking
+        private const double Speed0 = 8.5;      // units per second
+        private const double BeadGap = 0.58;    // gap between body beads along the path
+        private const double PathSample = 0.20; // how finely the flown path is recorded
+        private const double GrabDist = 1.8;    // how near you must pass to take a block
+        private const double HopLift = 1.6;     // how far it rises over what is in the way
+        private const int Beads0 = 14, BeadsMax = 90;
 
-        // How high the snake rides over its own tail, or over an obstacle.
-        private const double HopHeight = 1.35;
+        private const int GoldOneIn = 6;
+        private const int MaxParticles = 260;
 
         private static readonly double LatticeStep = ViewDistance / 13.0;
         private static readonly double MoteSize = LatticeStep * 0.019;
@@ -213,15 +210,19 @@ namespace Snake3D
 
         // ---- game state ----
         private GameState state = GameState.Greeting;
-        private readonly List<Seg> snake = new List<Seg>();
-        private List<Seg> prevSnake = new List<Seg>();
-        private readonly Queue<int> turns = new Queue<int>();   // 0 yawL 1 yawR 2 pitchUp 3 pitchDown
-        private C3 fwd, up;                                     // orthonormal integer heading frame
+        private Point3D pos;                                    // continuous, not a cell
+        private Vector3D fwd = new Vector3D(1, 0, 0);
+        private Vector3D up = new Vector3D(0, 1, 0);
+        private readonly List<Point3D> trail = new List<Point3D>();  // path flown, newest first
+        private readonly List<Point3D> beads = new List<Point3D>();
+        private int beadCount = Beads0;
+        private int inX, inY;                                   // held banking / climbing
+        private double speed = Speed0, lift, refreshT;
         private readonly List<Food> foods = new List<Food>();
         private readonly List<C3> rocks = new List<C3>();
         private readonly HashSet<C3> rockSet = new HashSet<C3>();
         private readonly HashSet<C3> eatenChunks = new HashSet<C3>();
-        private int score, best, eaten, growPending;
+        private int score, best, eaten;
         private bool boosting;
 
         private readonly List<Particle> particles = new List<Particle>();
@@ -229,7 +230,7 @@ namespace Snake3D
 
         // ---- timing / camera ----
         private readonly Stopwatch clock = Stopwatch.StartNew();
-        private double lastTime, stepAcc, stepDur = 0.16;
+        private double lastTime;
         private Point3D camPos, camTgt;
         private Vector3D camUp = new Vector3D(0, 1, 0);
         private Vector3D camFwd = new Vector3D(0, 0, 1);
@@ -632,7 +633,7 @@ namespace Snake3D
             TextBlock s = T("Press SPACE to carry on", 14, CMuted, FontWeights.Normal);
             s.Margin = new Thickness(0, 10, 0, 0);
             overlayStack.Children.Add(s);
-            TextBlock st = T("Score " + score + "   ·   length " + snake.Count + "   ·   " + eaten + " eaten",
+            TextBlock st = T("Score " + score + "   ·   length " + beadCount + "   ·   " + eaten + " eaten",
                              12.5, CMuted, FontWeights.Normal);
             st.Margin = new Thickness(0, 18, 0, 0);
             overlayStack.Children.Add(st);
@@ -740,9 +741,7 @@ namespace Snake3D
             foods.Clear();
             rocks.Clear();
             rockSet.Clear();
-            if (snake.Count == 0) return;
-
-            C3 h = snake[0].Cell;
+            C3 h = new C3((int)Math.Floor(pos.X), (int)Math.Floor(pos.Y), (int)Math.Floor(pos.Z));
             int cx = FloorDiv(h.X, ChunkSize), cy = FloorDiv(h.Y, ChunkSize), cz = FloorDiv(h.Z, ChunkSize);
             int r = (int)Math.Ceiling(ViewDistance / ChunkSize) + 1;
 
@@ -771,46 +770,37 @@ namespace Snake3D
         // game flow
         // =================================================================
 
-        private static Seg MakeSeg(int x, int y, int z)
-        {
-            Seg s = new Seg();
-            s.Cell = new C3(x, y, z);
-            s.Lift = new Vector3D(0, 0, 0);
-            return s;
-        }
-
         private void StartGame()
         {
-            snake.Clear();
-            snake.Add(MakeSeg(0, 0, 0));
-            snake.Add(MakeSeg(-1, 0, 0));
-            snake.Add(MakeSeg(-2, 0, 0));
-            prevSnake = new List<Seg>(snake);
-            turns.Clear();
+            pos = new Point3D(0, 0, 0);
+            fwd = new Vector3D(1, 0, 0);
+            up = new Vector3D(0, 1, 0);
+            trail.Clear();
+            trail.Add(pos);
+            beads.Clear();
+            beadCount = Beads0;
+            inX = 0; inY = 0;
+            speed = Speed0; lift = 0; refreshT = 0;
             particles.Clear();
             foods.Clear();
             eatenChunks.Clear();
             ClearPops();
 
-            fwd = new C3(1, 0, 0);
-            up = new C3(0, 1, 0);
-            score = 0; eaten = 0; growPending = 0;
+            score = 0; eaten = 0;
             boosting = false;
-            stepDur = 0.16; stepAcc = 0;
             RefreshWorld();
+            LayBeads();
 #if CAPTURE
-            // Worst case for the renderer: a maximum-length snake coiled into a
-            // small box so every bead is on screen at once.
+            // Worst case for the renderer: the longest body, every bead in view.
             if (Environment.GetEnvironmentVariable("SNAKE3D_LONG") == "1")
             {
-                for (int i = snake.Count; i < MaxLength; i++)
+                beadCount = BeadsMax;
+                for (int i = 1; i < 400; i++)
                 {
-                    int x = i % 10, z = (i / 10) % 10, y = i / 100;
-                    if ((z & 1) == 1) x = 9 - x;
-                    if ((y & 1) == 1) z = 9 - z;
-                    snake.Add(MakeSeg(x - 5, y - 1, z - 5));
+                    double a = i * 0.09;
+                    trail.Add(new Point3D(Math.Cos(a) * 6 - 6, Math.Sin(a * 0.7) * 3, Math.Sin(a) * 6));
                 }
-                prevSnake = new List<Seg>(snake);
+                LayBeads();
             }
 #endif
 
@@ -836,79 +826,119 @@ namespace Snake3D
             else if (state == GameState.Paused) { state = GameState.Playing; HideOverlay(); }
         }
 
-        // Rotate the heading frame. Right is fwd x up, matching the on-screen
-        // right of the chase camera.
-        private void ApplyTurn(int t)
+        // Rodrigues: spin a vector around a unit axis.
+        private static Vector3D Rot(Vector3D v, Vector3D axis, double a)
         {
-            C3 right = C3.Cross(fwd, up);
-            switch (t)
+            double c = Math.Cos(a), s = Math.Sin(a);
+            double k = Vector3D.DotProduct(axis, v) * (1 - c);
+            Vector3D cr = Vector3D.CrossProduct(axis, v);
+            return new Vector3D(v.X * c + cr.X * s + axis.X * k,
+                                v.Y * c + cr.Y * s + axis.Y * k,
+                                v.Z * c + cr.Z * s + axis.Z * k);
+        }
+
+        private static double Dist(Point3D a, Point3D b)
+        {
+            double dx = a.X - b.X, dy = a.Y - b.Y, dz = a.Z - b.Z;
+            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        // Walk back along the flown path, dropping a bead every BeadGap units.
+        // The body therefore traces the exact curve the head flew, however
+        // gently it banked.
+        private void LayBeads()
+        {
+            beads.Clear();
+            beads.Add(pos);
+            Point3D prev = pos;
+            double walked = 0, want = BeadGap;
+            for (int i = 0; i < trail.Count && beads.Count < beadCount; i++)
             {
-                case 0: fwd = -right; break;                        // yaw left
-                case 1: fwd = right; break;                         // yaw right
-                case 2: { C3 f = fwd; fwd = up; up = -f; break; }   // pitch up
-                default: { C3 f = fwd; fwd = -up; up = f; break; }  // pitch down
+                double seg = Dist(prev, trail[i]);
+                while (seg > 1e-6 && walked + seg >= want && beads.Count < beadCount)
+                {
+                    double f = (want - walked) / seg;
+                    beads.Add(new Point3D(prev.X + (trail[i].X - prev.X) * f,
+                                          prev.Y + (trail[i].Y - prev.Y) * f,
+                                          prev.Z + (trail[i].Z - prev.Z) * f));
+                    want += BeadGap;
+                }
+                walked += seg;
+                prev = trail[i];
             }
         }
 
-        // Is that cell part of the body, or a rock? Used to decide when to
-        // start climbing -- never to end the run, since nothing can.
-        private bool InTheWay(C3 c)
+        // Anything solid just ahead? Used only to lift over it -- nothing can
+        // end a run.
+        private bool BlockedAhead()
         {
-            if (rockSet.Contains(c)) return true;
-            for (int i = 1; i < snake.Count; i++) if (snake[i].Cell == c) return true;
+            Point3D probe = new Point3D(pos.X + fwd.X * 2.4, pos.Y + fwd.Y * 2.4, pos.Z + fwd.Z * 2.4);
+            for (int i = 10; i < beads.Count; i++)
+                if (Dist(probe, beads[i]) < 1.4) return true;
+            for (int r = 0; r < rocks.Count; r++)
+                if (Dist(probe, new Point3D(rocks[r].X, rocks[r].Y, rocks[r].Z)) < 1.6) return true;
             return false;
         }
 
-        private void Step()
+        private void Advance(double dt)
         {
-            if (turns.Count > 0) ApplyTurn(turns.Dequeue());
+            if (dt > 0.08) dt = 0.08;
 
-            C3 nh = snake[0].Cell + fwd;
+            // bank and climb by however long the control is held
+            double ang = TurnRate * dt;
+            if (inX != 0) fwd = Rot(fwd, up, -inX * ang);
+            if (inY != 0)
+            {
+                Vector3D right = Norm(Vector3D.CrossProduct(fwd, up));
+                fwd = Rot(fwd, right, -inY * ang);
+                up = Rot(up, right, -inY * ang);
+            }
+            // keep the frame orthonormal, or it drifts and skews over time
+            fwd = Norm(fwd);
+            up = Norm(up - fwd * Vector3D.DotProduct(up, fwd));
 
-            // Look a couple of cells ahead, so the climb has started by the
-            // time the obstruction arrives rather than after it.
-            bool blocked = InTheWay(nh) || InTheWay(nh + fwd) || InTheWay(nh + fwd + fwd);
-            Vector3D wantLift = blocked
-                ? new Vector3D(up.X * HopHeight, up.Y * HopHeight, up.Z * HopHeight)
-                : new Vector3D(0, 0, 0);
-            Vector3D headLift = snake[0].Lift + (wantLift - snake[0].Lift) * 0.55;
+            // rise over whatever is in the way; the path itself bends, so the
+            // whole body follows the same arc a moment later
+            double wantLift = BlockedAhead() ? HopLift : 0;
+            double nl = lift + (wantLift - lift) * (1 - Math.Exp(-5 * dt));
+            double dLift = nl - lift;
+            lift = nl;
 
-            prevSnake = new List<Seg>(snake);
-            Seg head = new Seg();
-            head.Cell = nh;
-            head.Lift = headLift;
-            snake.Insert(0, head);
+            double sp = speed * (boosting ? 1.8 : 1.0);
+            pos = new Point3D(pos.X + fwd.X * sp * dt + up.X * dLift,
+                              pos.Y + fwd.Y * sp * dt + up.Y * dLift,
+                              pos.Z + fwd.Z * sp * dt + up.Z * dLift);
 
-            // Take the nearest block inside the grab pocket.
-            int hit = -1, hitDist = int.MaxValue;
+            // record the path
+            if (Dist(pos, trail[0]) >= PathSample)
+            {
+                trail.Insert(0, pos);
+                int keep = (int)Math.Ceiling(beadCount * BeadGap / PathSample) + 6;
+                if (trail.Count > keep) trail.RemoveRange(keep, trail.Count - keep);
+            }
+            LayBeads();
+
+            // collect anything flown near
             for (int i = 0; i < foods.Count; i++)
             {
-                int d = C3.Cheb(foods[i].Cell, nh);
-                if (d <= GrabRadius && d < hitDist) { hit = i; hitDist = d; }
-            }
-
-            if (hit >= 0)
-            {
-                Food f = foods[hit];
+                Food f = foods[i];
+                if (Dist(new Point3D(f.Cell.X, f.Cell.Y, f.Cell.Z), pos) > GrabDist) continue;
                 score += f.Gold ? 5 : 1;
                 eaten += 1;
-                growPending += f.Gold ? 3 : 2;
+                beadCount = Math.Min(BeadsMax, beadCount + (f.Gold ? 4 : 2));
+                speed = Math.Min(15.0, Speed0 + eaten * 0.11);
                 Spawn(f.Cell.X, f.Cell.Y, f.Cell.Z, f.Gold ? 22 : 12,
                       f.Gold ? goldMat : foodMat, f.Gold ? 0.22 : 0.24, f.Gold ? 4.2 : 3.2);
                 Say(f.Gold);
                 eatenChunks.Add(f.Chunk);
                 if (score > best) best = score;
-                stepDur = Math.Max(0.082, 0.16 - eaten * 0.0032);
+                RefreshWorld();
+                UpdateHud();
+                break;
             }
 
-            // Growth is capped so a very long tail cannot drag the frame rate
-            // down; there is no way to lose, so runs can go on indefinitely.
-            if (snake.Count > MaxLength) growPending = 0;
-            if (growPending > 0) growPending--;
-            else snake.RemoveAt(snake.Count - 1);
-
-            RefreshWorld();
-            UpdateHud();
+            refreshT += dt;
+            if (refreshT > 0.25) { refreshT = 0; RefreshWorld(); }
         }
 
         // Zero-gravity burst: particles drift outward and fade.
@@ -1002,9 +1032,12 @@ namespace Snake3D
         // input
         // =================================================================
 
-        private void Turn(int t)
+        // Held input rather than queued turns - that is what makes a turn gradual.
+        private void Hold(int x, int y)
         {
-            if (state == GameState.Playing && turns.Count < 2) turns.Enqueue(t);
+            if (state != GameState.Playing) { inX = 0; inY = 0; return; }
+            if (x != 99) inX = x;
+            if (y != 99) inY = y;
         }
 
         private void OnKeyDown(object sender, KeyEventArgs e)
@@ -1012,10 +1045,10 @@ namespace Snake3D
             Key k = e.Key;
             if (k == Key.System) k = e.SystemKey;
 
-            if (k == Key.Left || k == Key.A) { Turn(0); e.Handled = true; return; }
-            if (k == Key.Right || k == Key.D) { Turn(1); e.Handled = true; return; }
-            if (k == Key.Up || k == Key.W) { Turn(2); e.Handled = true; return; }
-            if (k == Key.Down || k == Key.S) { Turn(3); e.Handled = true; return; }
+            if (k == Key.Left || k == Key.A) { Hold(-1, 99); e.Handled = true; return; }
+            if (k == Key.Right || k == Key.D) { Hold(1, 99); e.Handled = true; return; }
+            if (k == Key.Up || k == Key.W) { Hold(99, -1); e.Handled = true; return; }
+            if (k == Key.Down || k == Key.S) { Hold(99, 1); e.Handled = true; return; }
             if (k == Key.LeftShift || k == Key.RightShift) { boosting = true; e.Handled = true; return; }
 
             if (k == Key.Enter)
@@ -1039,7 +1072,11 @@ namespace Snake3D
 
         private void OnKeyUp(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.LeftShift || e.Key == Key.RightShift) boosting = false;
+            Key k = e.Key;
+            if (k == Key.System) k = e.SystemKey;
+            if (k == Key.LeftShift || k == Key.RightShift) boosting = false;
+            else if (k == Key.Left || k == Key.A || k == Key.Right || k == Key.D) inX = 0;
+            else if (k == Key.Up || k == Key.W || k == Key.Down || k == Key.S) inY = 0;
         }
 
         // =================================================================
@@ -1054,17 +1091,7 @@ namespace Snake3D
             if (dt > 0.25) dt = 0.25;
             if (dt <= 0) return;
 
-            if (state == GameState.Playing)
-            {
-                stepAcc += dt * (boosting ? 1.9 : 1.0);
-                int guard = 0;
-                while (stepAcc >= stepDur && state == GameState.Playing && ++guard < 8)
-                {
-                    stepAcc -= stepDur;
-                    Step();
-                }
-                if (stepAcc > stepDur) stepAcc = stepDur;
-            }
+            if (state == GameState.Playing) Advance(dt);
 
             UpdateParticles(dt);
             UpdatePops(dt);
@@ -1075,9 +1102,8 @@ namespace Snake3D
                 frames++;
                 fpsAcc += dt;
                 if (fpsAcc >= 0.5) { fps = frames / fpsAcc; frames = 0; fpsAcc = 0; }
-                C3 hp = snake.Count > 0 ? snake[0].Cell : new C3(0, 0, 0);
-                dbgText.Text = string.Format("{0}  fps {1:0}  head {2},{3},{4}  len {5}  food {6}  rocks {7}",
-                                             state, fps, hp.X, hp.Y, hp.Z, snake.Count, foods.Count, rocks.Count);
+                dbgText.Text = string.Format("{0}  fps {1:0}  at {2:0.0},{3:0.0},{4:0.0}  beads {5}  food {6}  rocks {7}",
+                                             state, fps, pos.X, pos.Y, pos.Z, beads.Count, foods.Count, rocks.Count);
             }
 #if CAPTURE
             CaptureTick();
@@ -1113,48 +1139,28 @@ namespace Snake3D
         private void Render(double t, double dt)
         {
             bool alive = state == GameState.Playing || state == GameState.Paused;
-            double alpha = state == GameState.Playing ? Math.Min(1.0, stepAcc / stepDur) : 1.0;
 
-            double headX = 0, headY = 0, headZ = 0;
-            Vector3D F = new Vector3D(fwd.X, fwd.Y, fwd.Z);
-            Vector3D U = new Vector3D(up.X, up.Y, up.Z);
-            Vector3D R = Vector3D.CrossProduct(F, U);
-
-            if (snake.Count > 0)
-            {
-                Point3D p = SegPos(0, alpha);
-                headX = p.X; headY = p.Y; headZ = p.Z;
-            }
+            double headX = pos.X, headY = pos.Y, headZ = pos.Z;
+            Vector3D F = fwd, U = up;
+            Vector3D R = Norm(Vector3D.CrossProduct(F, U));
 
             UpdateCamera(t, dt, headX, headY, headZ, F, U);
 
             pool.Begin();
 
-            if (alive && snake.Count > 0)
+            if (alive && beads.Count > 0)
             {
-                int n = snake.Count;
-                Point3D next = new Point3D();
-                bool haveNext = false;
-
+                // The beads sit along the flown path, close enough to overlap,
+                // so the body reads as one smooth curve through whatever arc
+                // the head just made.
+                int n = beads.Count;
                 for (int i = n - 1; i >= 0; i--)
                 {
-                    Point3D p = SegPos(i, alpha);
-
-                    double ddx = p.X - headX, ddy = p.Y - headY, ddz = p.Z - headZ;
-                    if (ddx * ddx + ddy * ddy + ddz * ddz > ViewDistance * ViewDistance) { haveNext = false; continue; }
-
+                    Point3D p = beads[i];
                     double k = n <= 1 ? 0 : i / (double)(n - 1);
-                    double size = i == 0 ? 0.98 : 0.86 - k * 0.26;
+                    double size = i == 0 ? 0.98 : 0.88 - k * 0.26;
                     Material m = i == 0 ? headMat : bodyMats[Math.Min(bodyMats.Length - 1, (int)(k * bodyMats.Length))];
                     pool.Add(sphereGeo, p.X, p.Y, p.Z, size, 0, m);
-
-                    // A small bead in the gap, so the beads read as one animal
-                    // rather than a string of loose balls.
-                    if (haveNext)
-                        pool.Add(beadGeo, (p.X + next.X) / 2, (p.Y + next.Y) / 2, (p.Z + next.Z) / 2,
-                                 size * 0.52, 0, m);
-                    next = p;
-                    haveNext = true;
                 }
 
                 // eyes on the leading face of the head
@@ -1209,16 +1215,6 @@ namespace Snake3D
             starXf.OffsetZ = camPos.Z;
         }
 
-        // Interpolated world position of one bead, lift included.
-        private Point3D SegPos(int i, double alpha)
-        {
-            Seg to = snake[i];
-            Seg from = prevSnake[Math.Min(i, prevSnake.Count - 1)];
-            return new Point3D(
-                from.Cell.X + (to.Cell.X - from.Cell.X) * alpha + from.Lift.X + (to.Lift.X - from.Lift.X) * alpha,
-                from.Cell.Y + (to.Cell.Y - from.Cell.Y) * alpha + from.Lift.Y + (to.Lift.Y - from.Lift.Y) * alpha,
-                from.Cell.Z + (to.Cell.Z - from.Cell.Z) * alpha + from.Lift.Z + (to.Lift.Z - from.Lift.Z) * alpha);
-        }
 
         private void UpdateCamera(double t, double dt, double headX, double headY, double headZ,
                                   Vector3D F, Vector3D U)
@@ -1226,7 +1222,7 @@ namespace Snake3D
             Point3D wantPos, wantTgt;
             Vector3D wantUp;
 
-            if (state == GameState.Greeting || snake.Count == 0)
+            if (state == GameState.Greeting)
             {
                 double a = t * 0.16;
                 wantPos = new Point3D(headX + Math.Sin(a) * 26.0, headY + 9.0, headZ + Math.Cos(a) * 26.0);
@@ -1244,7 +1240,7 @@ namespace Snake3D
                 wantUp = U;
             }
 
-            if (state == GameState.Greeting || snake.Count == 0)
+            if (state == GameState.Greeting)
             {
                 // The orbit has no heading to follow, so ease the camera itself.
                 double k = camInit ? 1 - Math.Exp(-7.5 * dt) : 1.0;
@@ -1260,14 +1256,11 @@ namespace Snake3D
             }
             else
             {
-                // Smooth the camera's own heading and hang its position off
-                // that, so a turn sweeps it round the snake on an arc rather
-                // than cutting straight across the corner. The rate follows the
-                // step, so the swing takes about as long as travelling one cell
-                // -- the turn keeps pace with the flying instead of lagging and
-                // then snapping to catch up.
-                double step = stepDur / (boosting ? 1.9 : 1.0);
-                double k = camInit ? 1 - Math.Exp(-(3.0 / Math.Max(0.05, step)) * dt) : 1.0;
+                // The heading itself changes gradually now, so the camera only
+                // needs a light trail behind it. Smoothing its heading and
+                // hanging the position off that keeps it sweeping round the
+                // snake rather than cutting the corner.
+                double k = camInit ? 1 - Math.Exp(-7.0 * dt) : 1.0;
 
                 camFwd = Norm(camFwd + (F - camFwd) * k);
                 Vector3D un = camUp + (U - camUp) * k;
@@ -1350,7 +1343,7 @@ namespace Snake3D
                 {
                     File.WriteAllText(Path.Combine(capDir, "fps.txt"),
                         string.Format("{0:0.0} fps over 6s  score {1}  len {2}  food {3}  rocks {4}",
-                                      fpsFrames / 6.0, score, snake.Count, foods.Count, rocks.Count));
+                                      fpsFrames / 6.0, score, beads.Count, foods.Count, rocks.Count));
                     CaptureQuit();
                 }
                 return;
@@ -1360,17 +1353,17 @@ namespace Snake3D
             {
                 if (t < 2.0 || capDone) return;
                 capDone = true;
-                C3 origin = snake[0].Cell;
+                Point3D origin = pos;
 
                 RefreshWorld();
                 List<C3> before = SnapshotFood();
                 int inView = before.Count, rockCount = rocks.Count;
 
                 // 1. leave, return: the neighbourhood must be untouched
-                snake[0] = MakeSeg(origin.X + 4000, origin.Y - 2500, origin.Z + 900);
+                pos = new Point3D(origin.X + 4000, origin.Y - 2500, origin.Z + 900);
                 RefreshWorld();
                 int elsewhere = foods.Count;
-                snake[0] = MakeSeg(origin.X, origin.Y, origin.Z);
+                pos = origin;
                 RefreshWorld();
                 bool unchanged = Same(before, SnapshotFood());
 
@@ -1382,50 +1375,61 @@ namespace Snake3D
                 bool collected = afterEat.Count == before.Count - 1 && !afterEat.Contains(gone);
 
                 // 3. leave, return again: still gone, rest intact
-                snake[0] = MakeSeg(origin.X - 3000, origin.Y + 1500, origin.Z - 700);
+                pos = new Point3D(origin.X - 3000, origin.Y + 1500, origin.Z - 700);
                 RefreshWorld();
-                snake[0] = MakeSeg(origin.X, origin.Y, origin.Z);
+                pos = origin;
                 RefreshWorld();
                 bool staysGone = Same(afterEat, SnapshotFood());
 
-                // 4. the forgiving grab: pass a block off by one cell on two axes
+                // 4. the forgiving grab: fly past a block without landing on it
                 RefreshWorld();
                 C3 target = foods[0].Cell;
-                snake[0] = MakeSeg(target.X - 1 - fwd.X, target.Y + 1 - fwd.Y, target.Z - fwd.Z);
+                pos = new Point3D(target.X - 1.2, target.Y + 1.0, target.Z - 0.6);
                 int scoreBefore = score;
-                Step();
+                Advance(0.016);
                 bool grabbed = score > scoreBefore;
 
-                // 5. the hop: aim the head straight at its own tail and check
-                //    the body lifts clear rather than passing through it
-                snake.Clear();
-                for (int i = 0; i < 12; i++) snake.Add(MakeSeg(-i, 0, 0));
-                for (int i = 0; i < 6; i++) snake.Add(MakeSeg(-11 + i, 1, 0));   // tail doubles back over
-                prevSnake = new List<Seg>(snake);
-                fwd = new C3(-1, 0, 0); up = new C3(0, 1, 0);
-                RefreshWorld();
-                double maxLift = 0;
-                for (int i = 0; i < 10; i++)
+                // 5. the bank: hold a turn and check the heading sweeps round
+                //    gradually and settles between the axes
+                pos = new Point3D(0, 0, 0);
+                fwd = new Vector3D(1, 0, 0); up = new Vector3D(0, 1, 0);
+                trail.Clear(); trail.Add(pos); LayBeads();
+                inX = 1;
+                Vector3D f0 = fwd;
+                double half = 0;
+                for (int i = 0; i < 48; i++)
                 {
-                    Step();
-                    double l = snake[0].Lift.Length;
-                    if (l > maxLift) maxLift = l;
+                    Advance(1.0 / 60);
+                    if (i == 23) half = Math.Acos(Math.Max(-1, Math.Min(1,
+                        Vector3D.DotProduct(f0, fwd)))) * 180 / Math.PI;
                 }
-                bool hopped = maxLift > 0.5;
+                double swept = Math.Acos(Math.Max(-1, Math.Min(1,
+                    Vector3D.DotProduct(f0, fwd)))) * 180 / Math.PI;
+                bool gradual = half > 20 && half < swept - 10;
+
+                inX = 0; inY = -1;
+                for (int i = 0; i < 20; i++) Advance(1.0 / 60);
+                int axes = 0;
+                if (Math.Abs(fwd.X) > 0.08) axes++;
+                if (Math.Abs(fwd.Y) > 0.08) axes++;
+                if (Math.Abs(fwd.Z) > 0.08) axes++;
+                bool diagonal = axes > 1;
 
                 File.WriteAllText(Path.Combine(capDir, "world.txt"), string.Format(
                     "blocks within view {0}, rocks {1}, and {2} blocks somewhere else\r\n" +
                     "world unchanged after leaving and returning  : {3}\r\n" +
                     "eating one removes exactly that block         : {4}\r\n" +
                     "it is still gone after leaving and returning  : {5}\r\n" +
-                    "block eaten while passing 1 cell off on 2 axes: {6}\r\n" +
-                    "snake lifts over its own tail (max {7:0.00})    : {8}",
+                    "block eaten by flying near, not onto, it      : {6}\r\n" +
+                    "a held turn sweeps round gradually ({7:0} deg) : {8}\r\n" +
+                    "heading settles between axes (diagonal)       : {9}",
                     inView, rockCount, elsewhere,
                     unchanged ? "PASS" : "FAIL",
                     collected ? "PASS" : "FAIL",
                     staysGone ? "PASS" : "FAIL",
                     grabbed ? "PASS" : "FAIL",
-                    maxLift, hopped ? "PASS" : "FAIL"));
+                    swept, gradual ? "PASS" : "FAIL",
+                    diagonal ? "PASS" : "FAIL"));
                 CaptureQuit();
                 return;
             }
