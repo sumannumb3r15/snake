@@ -791,26 +791,38 @@ Game3.prototype.update = function (dt) {
   while (this.acc >= this.step && guard++ < 6) { this.acc -= this.step; this.tick(); }
   if (this.acc > this.step) this.acc = this.step;
 };
-Game3.prototype.draw = function (t) {
+Game3.prototype.draw = function (t, dt) {
   var alpha = Math.min(1, this.acc / this.step);
   var s0 = this.snake[0], p0 = this.prev[0];
   var hx = p0.x + (s0.x - p0.x) * alpha + p0.lx + (s0.lx - p0.lx) * alpha;
   var hy = p0.y + (s0.y - p0.y) * alpha + p0.ly + (s0.ly - p0.ly) * alpha;
   var hz = p0.z + (s0.z - p0.z) * alpha + p0.lz + (s0.lz - p0.lz) * alpha;
 
+  // Smooth the camera's own heading, then hang its position off that, so a
+  // turn sweeps it round the snake on an arc instead of cutting across the
+  // corner. The rate is tied to the step, so the swing takes about as long as
+  // travelling one cell - the turn keeps pace with the flying instead of
+  // lagging behind and then snapping to catch up.
   var f = this.fwd, u = this.up;
-  var back = this.boost ? 10.6 : 9.4, high = this.boost ? 3.8 : 4.3;
-  var want = {x: hx - f.x*back + u.x*high, y: hy - f.y*back + u.y*high, z: hz - f.z*back + u.z*high};
-  if (!this.cam) this.cam = {p:want, t:{x:hx,y:hy,z:hz}, u:{x:u.x,y:u.y,z:u.z}};
-  var kp = 0.16, kt = 0.22;
+  if (!this.cam) this.cam = {f: {x:f.x, y:f.y, z:f.z}, u: {x:u.x, y:u.y, z:u.z}};
   var c = this.cam;
-  c.p = {x:c.p.x + (want.x-c.p.x)*kp, y:c.p.y + (want.y-c.p.y)*kp, z:c.p.z + (want.z-c.p.z)*kp};
-  var tgt = {x: hx + f.x*4.4, y: hy + f.y*4.4, z: hz + f.z*4.4};
-  c.t = {x:c.t.x + (tgt.x-c.t.x)*kt, y:c.t.y + (tgt.y-c.t.y)*kt, z:c.t.z + (tgt.z-c.t.z)*kt};
-  c.u = {x:c.u.x + (u.x-c.u.x)*0.2, y:c.u.y + (u.y-c.u.y)*0.2, z:c.u.z + (u.z-c.u.z)*0.2};
+
+  var step = this.step / (this.boost ? 1.9 : 1);
+  var k = 1 - Math.exp(-(3.0 / Math.max(0.05, step)) * dt);
+  c.f = norm({x: c.f.x + (f.x-c.f.x)*k, y: c.f.y + (f.y-c.f.y)*k, z: c.f.z + (f.z-c.f.z)*k});
+  var un = {x: c.u.x + (u.x-c.u.x)*k, y: c.u.y + (u.y-c.u.y)*k, z: c.u.z + (u.z-c.u.z)*k};
+  // keep up square to forward, or the view slowly skews as the two drift
+  var dot = un.x*c.f.x + un.y*c.f.y + un.z*c.f.z;
+  c.u = norm({x: un.x - c.f.x*dot, y: un.y - c.f.y*dot, z: un.z - c.f.z*dot});
+
+  var back = this.boost ? 10.6 : 9.4, high = this.boost ? 3.8 : 4.3;
+  c.p = {x: hx - c.f.x*back + c.u.x*high,
+         y: hy - c.f.y*back + c.u.y*high,
+         z: hz - c.f.z*back + c.u.z*high};
+  var tgt = {x: hx + c.f.x*4.4, y: hy + c.f.y*4.4, z: hz + c.f.z*4.4};
 
   // camera basis
-  var fz = norm({x:c.t.x-c.p.x, y:c.t.y-c.p.y, z:c.t.z-c.p.z});
+  var fz = norm({x:tgt.x-c.p.x, y:tgt.y-c.p.y, z:tgt.z-c.p.z});
   var rx = norm(cross(fz, c.u));
   var uy = cross(rx, fz);
   var focal = Math.min(W, H) * 0.9;
@@ -940,7 +952,7 @@ function frame(ms) {
       if (stick) stick.update(dt);
       game.update(dt);
     }
-    game.draw(t);
+    game.draw(t, dt);
   }
   requestAnimationFrame(frame);
 }
@@ -949,6 +961,37 @@ resize();
 showMenu();
 markPick();
 requestAnimationFrame(frame);
+
+// ?turntest banks the snake once and reports the angle still left to swing,
+// frame by frame. A jerky camera shows up as a jump straight to 0; a smooth
+// one walks down over roughly one step.
+if (location.search.indexOf('turntest') >= 0) {
+  setTimeout(function () {
+    startGame(3);
+    game.draw(0, 0.016);                       // settle the camera
+    var before = {x: game.cam.f.x, y: game.cam.f.y, z: game.cam.f.z};
+    game.queue(1);                             // bank right
+    game.tick();                               // apply it
+    var target = game.fwd;
+    var lines = ['step = ' + game.step.toFixed(3) + 's'];
+    var t = 0;
+    for (var i = 0; i < 14; i++) {
+      t += 0.016;
+      game.draw(t, 0.016);
+      var d = game.cam.f.x*target.x + game.cam.f.y*target.y + game.cam.f.z*target.z;
+      var ang = Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
+      lines.push((t*1000).toFixed(0) + 'ms  ' + ang.toFixed(1) + ' deg to go');
+    }
+    var startAng = Math.acos(Math.max(-1, Math.min(1,
+      before.x*target.x + before.y*target.y + before.z*target.z))) * 180/Math.PI;
+    lines.unshift('turn is ' + startAng.toFixed(0) + ' deg');
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;z-index:99;background:#000;color:#0f0;' +
+                        'font:12px monospace;padding:10px;white-space:pre';
+    box.textContent = lines.join('\n');
+    document.body.appendChild(box);
+  }, 400);
+}
 
 // ?sticktest drives the stick through real pointer events and reports what
 // the game actually received. A screenshot shows the stick is drawn; only

@@ -232,6 +232,7 @@ namespace Snake3D
         private double lastTime, stepAcc, stepDur = 0.16;
         private Point3D camPos, camTgt;
         private Vector3D camUp = new Vector3D(0, 1, 0);
+        private Vector3D camFwd = new Vector3D(0, 0, 1);
         private bool camInit;
 
         private static readonly string SavePath = Path.Combine(
@@ -1243,23 +1244,43 @@ namespace Snake3D
                 wantUp = U;
             }
 
-            if (!camInit)
+            if (state == GameState.Greeting || snake.Count == 0)
             {
-                camPos = wantPos; camTgt = wantTgt; camUp = wantUp;
+                // The orbit has no heading to follow, so ease the camera itself.
+                double k = camInit ? 1 - Math.Exp(-7.5 * dt) : 1.0;
+                camPos = new Point3D(camPos.X + (wantPos.X - camPos.X) * k,
+                                     camPos.Y + (wantPos.Y - camPos.Y) * k,
+                                     camPos.Z + (wantPos.Z - camPos.Z) * k);
+                camTgt = new Point3D(camTgt.X + (wantTgt.X - camTgt.X) * k,
+                                     camTgt.Y + (wantTgt.Y - camTgt.Y) * k,
+                                     camTgt.Z + (wantTgt.Z - camTgt.Z) * k);
+                camUp = Norm(camUp + (wantUp - camUp) * k);
+                camFwd = Norm(new Vector3D(camTgt.X - camPos.X, camTgt.Y - camPos.Y, camTgt.Z - camPos.Z));
                 camInit = true;
             }
             else
             {
-                double kp = 1 - Math.Exp(-7.5 * dt);
-                double kt = 1 - Math.Exp(-11.0 * dt);
-                double ku = 1 - Math.Exp(-9.0 * dt);
-                camPos = new Point3D(camPos.X + (wantPos.X - camPos.X) * kp,
-                                     camPos.Y + (wantPos.Y - camPos.Y) * kp,
-                                     camPos.Z + (wantPos.Z - camPos.Z) * kp);
-                camTgt = new Point3D(camTgt.X + (wantTgt.X - camTgt.X) * kt,
-                                     camTgt.Y + (wantTgt.Y - camTgt.Y) * kt,
-                                     camTgt.Z + (wantTgt.Z - camTgt.Z) * kt);
-                camUp = Norm(camUp + (wantUp - camUp) * ku);
+                // Smooth the camera's own heading and hang its position off
+                // that, so a turn sweeps it round the snake on an arc rather
+                // than cutting straight across the corner. The rate follows the
+                // step, so the swing takes about as long as travelling one cell
+                // -- the turn keeps pace with the flying instead of lagging and
+                // then snapping to catch up.
+                double step = stepDur / (boosting ? 1.9 : 1.0);
+                double k = camInit ? 1 - Math.Exp(-(3.0 / Math.Max(0.05, step)) * dt) : 1.0;
+
+                camFwd = Norm(camFwd + (F - camFwd) * k);
+                Vector3D un = camUp + (U - camUp) * k;
+                // keep up square to forward, or the view slowly skews
+                camUp = Norm(un - camFwd * Vector3D.DotProduct(un, camFwd));
+
+                double back = boosting ? 10.6 : 9.4;
+                double high = boosting ? 3.8 : 4.3;
+                camPos = new Point3D(headX - camFwd.X * back + camUp.X * high,
+                                     headY - camFwd.Y * back + camUp.Y * high,
+                                     headZ - camFwd.Z * back + camUp.Z * high);
+                camTgt = new Point3D(headX + camFwd.X * 4.4, headY + camFwd.Y * 4.4, headZ + camFwd.Z * 4.4);
+                camInit = true;
             }
 
             cam.Position = camPos;
@@ -1276,6 +1297,16 @@ namespace Snake3D
         private bool fpsLog;
         private int fpsFrames;
         private double lastSay;
+        // Close() is not immediate, so without this the block below runs again on
+        // the next frame -- on state it has already torn down.
+        private bool capDone;
+
+        // The game is opened as a dialog by the launcher, so Close() just hands
+        // control back and the process lives on. Tests want the whole app gone.
+        private static void CaptureQuit()
+        {
+            Application.Current.Shutdown();
+        }
 
         private void CaptureInit()
         {
@@ -1320,14 +1351,15 @@ namespace Snake3D
                     File.WriteAllText(Path.Combine(capDir, "fps.txt"),
                         string.Format("{0:0.0} fps over 6s  score {1}  len {2}  food {3}  rocks {4}",
                                       fpsFrames / 6.0, score, snake.Count, foods.Count, rocks.Count));
-                    Close();
+                    CaptureQuit();
                 }
                 return;
             }
 
             if (Environment.GetEnvironmentVariable("SNAKE3D_TESTWORLD") == "1")
             {
-                if (t < 2.0) return;
+                if (t < 2.0 || capDone) return;
+                capDone = true;
                 C3 origin = snake[0].Cell;
 
                 RefreshWorld();
@@ -1394,7 +1426,7 @@ namespace Snake3D
                     staysGone ? "PASS" : "FAIL",
                     grabbed ? "PASS" : "FAIL",
                     maxLift, hopped ? "PASS" : "FAIL"));
-                Close();
+                CaptureQuit();
                 return;
             }
 
@@ -1409,7 +1441,7 @@ namespace Snake3D
             int want = (int)((t - 1.2) * 9);
             if (want <= capFrame) return;
             capFrame = want;
-            if (capFrame > 22) { Close(); return; }
+            if (capFrame > 22) { CaptureQuit(); return; }
 
             int w = (int)ActualWidth, h = (int)ActualHeight;
             if (w <= 0 || h <= 0) return;
