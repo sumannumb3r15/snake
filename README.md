@@ -18,9 +18,10 @@ installs to the home screen on Android, iPhone and Mac.
 edges wrap right round. Biting yourself is the only way to lose.
 
 **Snake 3D** - open space with no edges, no walls and nothing that can end a
-run. You fly in six directions, banking and climbing relative to your own
-heading, and glide up over your own tail and over rocks rather than dying on
-them. The world is unbounded: space is diced into chunks and each chunk's
+run. It is free flight rather than a grid: hold a direction and the snake banks
+gradually, so it can settle on any heading at all, diagonals included. The body
+traces the exact curve it flew, and it glides up over its own tail and over
+rocks rather than dying on them. The world is unbounded: space is diced into chunks and each chunk's
 contents come from a hash of its coordinates, so the layout is fixed and
 stretches out forever. Nothing pops into being in front of you, and a block
 you flew past is in exactly the same place when you come back for it.
@@ -29,7 +30,7 @@ you flew past is in exactly the same place when you come back for it.
 
 |          | Snake 2D                    | Snake 3D                                      |
 | -------- | --------------------------- | --------------------------------------------- |
-| Keyboard | arrows or WASD              | left/right bank, up/down climb-dive, Shift boost |
+| Keyboard | arrows or WASD              | hold to bank and climb, Shift to boost        |
 | Touch    | thumb stick, or swipe       | thumb stick to bank and climb, BOOST button   |
 | Back     | Esc, or the **menu** button | Esc, or the **menu** button                   |
 

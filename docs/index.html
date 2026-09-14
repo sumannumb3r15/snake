@@ -144,7 +144,7 @@
     <div class="card c3" data-game="3">
       <div class="glyph">&#10022;</div>
       <h2>Snake 3D</h2>
-      <p>Endless night sky. Fly free, eat blocks, glide over your own tail.</p>
+      <p>Endless night sky. Bank and climb freely, eat blocks, glide over your own tail.</p>
       <div class="best" id="best3">not played yet</div>
     </div>
   </div>
@@ -363,16 +363,22 @@ Stick.prototype.move = function (px, py) {
 };
 
 Stick.prototype.update = function (dt) {
-  if (!this.dir || !game) return;
+  if (!game) return;
+
+  // Flight is continuous now, so the 3D game wants the direction held, not a
+  // series of discrete turns - that is what lets a long push bank round a
+  // wide arc and stop anywhere in between.
+  if (this.which === 3) {
+    game.inX = this.dir ? this.dir.x : 0;
+    game.inY = this.dir ? this.dir.y : 0;
+    return;
+  }
+
+  if (!this.dir) return;
   this.timer -= dt;
   if (this.timer > 0) return;
   this.timer = REPEAT;
-  var d = this.dir;
-  if (this.which === 2) game.turn(d.x, d.y);
-  else if (d.x < 0) game.queue(0);        // bank left
-  else if (d.x > 0) game.queue(1);        // bank right
-  else if (d.y < 0) game.queue(2);        // climb
-  else game.queue(3);                     // dive
+  game.turn(this.dir.x, this.dir.y);
 };
 
 function buildPad(which) {
@@ -637,7 +643,17 @@ Game2.prototype.draw = function (t) {
 // SNAKE 3D -- endless night sky, free flight, nothing to lose.
 // Rendered by hand: project, sort back-to-front, paint.
 //=====================================================================
-var GRAB = 1, CHUNK = 44, VIEW = 90, MAXLEN = 160, HOP = 1.35;
+// Free flight, not a grid. The snake holds a continuous heading and banks
+// gradually while you hold a direction, so it can end up pointing anywhere -
+// diagonals included - rather than snapping between six axes.
+var CHUNK = 44, VIEW = 90;
+var TURN = 2.0;        // radians per second of banking
+var SPEED0 = 8.5;      // units per second
+var BEAD = 0.58;       // gap between body beads along the path
+var SAMPLE = 0.20;     // how finely the flown path is recorded
+var GRAB3 = 1.8;       // how near you must pass to take a block
+var HOP3 = 1.6;        // how far it rises over whatever is in the way
+var BEADS0 = 14, BEADSMAX = 90;
 
 function hash3(x, y, z) {
   var h = 2166136261;
@@ -649,16 +665,44 @@ function hash3(x, y, z) {
 }
 function floorDiv(a, b) { return Math.floor(a / b); }
 
+// --- small vector helpers -------------------------------------------------
+function v3(x, y, z) { return {x:x, y:y, z:z}; }
+function vadd(a, b) { return {x:a.x+b.x, y:a.y+b.y, z:a.z+b.z}; }
+function vsub(a, b) { return {x:a.x-b.x, y:a.y-b.y, z:a.z-b.z}; }
+function vmul(a, s) { return {x:a.x*s, y:a.y*s, z:a.z*s}; }
+function vdot(a, b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
+function cross(a, b) {
+  return {x:a.y*b.z - a.z*b.y, y:a.z*b.x - a.x*b.z, z:a.x*b.y - a.y*b.x};
+}
+function dist3(a, b) {
+  var dx = a.x-b.x, dy = a.y-b.y, dz = a.z-b.z;
+  return Math.sqrt(dx*dx + dy*dy + dz*dz);
+}
+// Rodrigues: spin v around a unit axis by an angle.
+function vrot(v, axis, a) {
+  var c = Math.cos(a), s = Math.sin(a), k = vdot(axis, v) * (1 - c);
+  var cr = cross(axis, v);
+  return {x: v.x*c + cr.x*s + axis.x*k,
+          y: v.y*c + cr.y*s + axis.y*k,
+          z: v.z*c + cr.z*s + axis.z*k};
+}
+
 function Game3() {
-  this.snake = [];
-  for (var i = 0; i < 3; i++) this.snake.push({x:-i, y:0, z:0, lx:0, ly:0, lz:0});
-  this.prev = this.snake.map(function (s) { return {x:s.x,y:s.y,z:s.z,lx:s.lx,ly:s.ly,lz:s.lz}; });
-  this.fwd = {x:1,y:0,z:0}; this.up = {x:0,y:1,z:0};
-  this.q = []; this.score = 0; this.eaten = 0; this.grow = 0;
-  this.step = 0.16; this.acc = 0; this.boost = false;
+  this.pos = v3(0, 0, 0);
+  this.fwd = v3(1, 0, 0);
+  this.up  = v3(0, 1, 0);
+  this.trail = [v3(0, 0, 0)];      // the path flown, newest first
+  this.beads = [];
+  this.len = BEADS0;
+  this.inX = 0; this.inY = 0;      // held banking / climbing
+  this.speed = SPEED0;
+  this.lift = 0;
+  this.score = 0; this.eaten = 0;
+  this.boost = false;
   this.eatenChunks = {};
   this.foods = []; this.rocks = [];
   this.cam = null;
+
   // a fixed bowl of stars, drawn as directions so they never come closer
   this.stars = [];
   var rs = 12345;
@@ -670,26 +714,18 @@ function Game3() {
   }
   this.refresh();
 }
-Game3.prototype.queue = function (t) { if (this.q.length < 2) this.q.push(t); };
+
+// Held input rather than queued turns - that is what makes a turn gradual.
 Game3.prototype.key = function (k, down) {
+  var v = down ? 1 : 0;
   if (k === 'Shift') { this.boost = down; return true; }
-  if (!down) return false;
-  if (k === 'ArrowLeft' || k === 'a') { this.queue(0); return true; }
-  if (k === 'ArrowRight' || k === 'd') { this.queue(1); return true; }
-  if (k === 'ArrowUp' || k === 'w') { this.queue(2); return true; }
-  if (k === 'ArrowDown' || k === 's') { this.queue(3); return true; }
+  if (k === 'ArrowLeft'  || k === 'a') { this.inX = down ? -1 : 0; return true; }
+  if (k === 'ArrowRight' || k === 'd') { this.inX = down ?  1 : 0; return true; }
+  if (k === 'ArrowUp'    || k === 'w') { this.inY = down ? -1 : 0; return true; }
+  if (k === 'ArrowDown'  || k === 's') { this.inY = down ?  1 : 0; return true; }
   return false;
 };
-function cross(a, b) {
-  return {x:a.y*b.z - a.z*b.y, y:a.z*b.x - a.x*b.z, z:a.x*b.y - a.y*b.x};
-}
-Game3.prototype.applyTurn = function (t) {
-  var r = cross(this.fwd, this.up), f = this.fwd;
-  if (t === 0) this.fwd = {x:-r.x,y:-r.y,z:-r.z};
-  else if (t === 1) this.fwd = r;
-  else if (t === 2) { this.fwd = this.up; this.up = {x:-f.x,y:-f.y,z:-f.z}; }
-  else { this.fwd = {x:-this.up.x,y:-this.up.y,z:-this.up.z}; this.up = f; }
-};
+
 // One block per chunk, straight from the hash -- so the world is fixed,
 // nothing appears out of thin air, and what you flew past is still there.
 Game3.prototype.foodInChunk = function (cx, cy, cz) {
@@ -703,9 +739,10 @@ Game3.prototype.foodInChunk = function (cx, cy, cz) {
     key: cx + ',' + cy + ',' + cz
   };
 };
+
 Game3.prototype.refresh = function () {
   this.foods.length = 0; this.rocks.length = 0;
-  var h = this.snake[0];
+  var h = this.pos;
   var cx = floorDiv(h.x, CHUNK), cy = floorDiv(h.y, CHUNK), cz = floorDiv(h.z, CHUNK);
   var r = Math.ceil(VIEW / CHUNK) + 1;
   for (var ix = cx - r; ix <= cx + r; ix++)
@@ -731,84 +768,104 @@ Game3.prototype.refresh = function () {
         }
       }
 };
-function dist3(a, b) {
-  var dx = a.x-b.x, dy = a.y-b.y, dz = a.z-b.z;
-  return Math.sqrt(dx*dx + dy*dy + dz*dz);
-}
-function cheb(a, b) {
-  return Math.max(Math.abs(a.x-b.x), Math.max(Math.abs(a.y-b.y), Math.abs(a.z-b.z)));
-}
-Game3.prototype.inTheWay = function (c) {
-  for (var i = 1; i < this.snake.length; i++) {
-    var s = this.snake[i];
-    if (s.x === c.x && s.y === c.y && s.z === c.z) return true;
+
+// Walk back along the flown path, dropping a bead every BEAD units. The body
+// therefore traces the exact curve the head flew, however gently it banked.
+Game3.prototype.layBeads = function () {
+  var out = [v3(this.pos.x, this.pos.y, this.pos.z)];
+  var pts = this.trail;
+  var prev = this.pos, walked = 0, want = BEAD;
+  for (var i = 0; i < pts.length && out.length < this.len; i++) {
+    var seg = dist3(prev, pts[i]);
+    while (seg > 1e-6 && walked + seg >= want && out.length < this.len) {
+      var f = (want - walked) / seg;
+      out.push(v3(prev.x + (pts[i].x-prev.x)*f,
+                  prev.y + (pts[i].y-prev.y)*f,
+                  prev.z + (pts[i].z-prev.z)*f));
+      want += BEAD;
+    }
+    walked += seg;
+    prev = pts[i];
   }
-  for (var r = 0; r < this.rocks.length; r++) {
-    var k = this.rocks[r];
-    if (k.x === c.x && k.y === c.y && k.z === c.z) return true;
-  }
+  this.beads = out;
+};
+
+// Anything solid just ahead? Used only to lift over it -- nothing can end a run.
+Game3.prototype.blockedAhead = function () {
+  var probe = vadd(this.pos, vmul(this.fwd, 2.4));
+  for (var i = 10; i < this.beads.length; i++)
+    if (dist3(probe, this.beads[i]) < 1.4) return true;
+  for (var r = 0; r < this.rocks.length; r++)
+    if (dist3(probe, this.rocks[r]) < 1.6) return true;
   return false;
 };
-Game3.prototype.tick = function () {
-  if (this.q.length) this.applyTurn(this.q.shift());
-  var h = this.snake[0], f = this.fwd;
-  var nh = {x:h.x + f.x, y:h.y + f.y, z:h.z + f.z};
 
-  // start climbing before the obstruction arrives, not after
-  var a1 = {x:nh.x+f.x, y:nh.y+f.y, z:nh.z+f.z};
-  var a2 = {x:a1.x+f.x, y:a1.y+f.y, z:a1.z+f.z};
-  var blocked = this.inTheWay(nh) || this.inTheWay(a1) || this.inTheWay(a2);
-  var wx = blocked ? this.up.x*HOP : 0, wy = blocked ? this.up.y*HOP : 0, wz = blocked ? this.up.z*HOP : 0;
+Game3.prototype.update = function (dt) {
+  if (dt > 0.08) dt = 0.08;
 
-  this.prev = this.snake.map(function (s) { return {x:s.x,y:s.y,z:s.z,lx:s.lx,ly:s.ly,lz:s.lz}; });
-  this.snake.unshift({x:nh.x, y:nh.y, z:nh.z,
-    lx: h.lx + (wx - h.lx) * 0.55, ly: h.ly + (wy - h.ly) * 0.55, lz: h.lz + (wz - h.lz) * 0.55});
-
-  var hit = -1, hd = 1e9;
-  for (var i = 0; i < this.foods.length; i++) {
-    var d = cheb(this.foods[i], nh);
-    if (d <= GRAB && d < hd) { hit = i; hd = d; }
+  // bank and climb by however long the control is held
+  var ang = TURN * dt;
+  if (this.inX) this.fwd = vrot(this.fwd, this.up, -this.inX * ang);
+  if (this.inY) {
+    var right = cross(this.fwd, this.up);
+    var rl = Math.sqrt(vdot(right, right)) || 1;
+    right = vmul(right, 1 / rl);
+    this.fwd = vrot(this.fwd, right, -this.inY * ang);
+    this.up  = vrot(this.up,  right, -this.inY * ang);
   }
-  if (hit >= 0) {
-    var fd = this.foods[hit];
-    this.score += fd.gold ? 5 : 1; this.eaten++;
-    this.grow += fd.gold ? 3 : 2;
+  // keep the frame orthonormal, or it drifts and skews over time
+  this.fwd = norm(this.fwd);
+  this.up = norm(vsub(this.up, vmul(this.fwd, vdot(this.up, this.fwd))));
+
+  // rise over whatever is in the way; the path itself bends, so the whole
+  // body follows the same arc a moment later
+  var wantLift = this.blockedAhead() ? HOP3 : 0;
+  var nl = this.lift + (wantLift - this.lift) * (1 - Math.exp(-5 * dt));
+  var dLift = nl - this.lift;
+  this.lift = nl;
+
+  var sp = this.speed * (this.boost ? 1.8 : 1);
+  this.pos = vadd(vadd(this.pos, vmul(this.fwd, sp * dt)), vmul(this.up, dLift));
+
+  // record the path
+  if (dist3(this.pos, this.trail[0]) >= SAMPLE) {
+    this.trail.unshift(v3(this.pos.x, this.pos.y, this.pos.z));
+    var keep = Math.ceil((this.len * BEAD) / SAMPLE) + 6;
+    if (this.trail.length > keep) this.trail.length = keep;
+  }
+  this.layBeads();
+
+  // collect anything flown near
+  for (var i = 0; i < this.foods.length; i++) {
+    if (dist3(this.foods[i], this.pos) > GRAB3) continue;
+    var fd = this.foods[i];
+    this.score += fd.gold ? 5 : 1;
+    this.eaten++;
+    this.len = Math.min(BEADSMAX, this.len + (fd.gold ? 4 : 2));
+    this.speed = Math.min(15, SPEED0 + this.eaten * 0.11);
     this.eatenChunks[fd.key] = 1;
-    this.step = Math.max(0.082, 0.16 - this.eaten * 0.0032);
     toast(fd.gold ? ['jackpot!','shiny!','gold!','treasure!'][(Math.random()*4)|0]
                   : ['yum!','nom nom','tasty!','mmm!','om nom','crunch!'][(Math.random()*6)|0], fd.gold);
     scoreN.textContent = this.score;
     setBest('snake3d', this.score);
     bestN.textContent = best('snake3d');
+    this.refresh();
+    break;
   }
-  if (this.snake.length > MAXLEN) this.grow = 0;
-  if (this.grow > 0) this.grow--; else this.snake.pop();
-  this.refresh();
-};
-Game3.prototype.update = function (dt) {
-  this.acc += dt * (this.boost ? 1.9 : 1);
-  var guard = 0;
-  while (this.acc >= this.step && guard++ < 6) { this.acc -= this.step; this.tick(); }
-  if (this.acc > this.step) this.acc = this.step;
+  this.refreshT = (this.refreshT || 0) + dt;
+  if (this.refreshT > 0.25) { this.refreshT = 0; this.refresh(); }
 };
 Game3.prototype.draw = function (t, dt) {
-  var alpha = Math.min(1, this.acc / this.step);
-  var s0 = this.snake[0], p0 = this.prev[0];
-  var hx = p0.x + (s0.x - p0.x) * alpha + p0.lx + (s0.lx - p0.lx) * alpha;
-  var hy = p0.y + (s0.y - p0.y) * alpha + p0.ly + (s0.ly - p0.ly) * alpha;
-  var hz = p0.z + (s0.z - p0.z) * alpha + p0.lz + (s0.lz - p0.lz) * alpha;
+  var hx = this.pos.x, hy = this.pos.y, hz = this.pos.z;
 
-  // Smooth the camera's own heading, then hang its position off that, so a
-  // turn sweeps it round the snake on an arc instead of cutting across the
-  // corner. The rate is tied to the step, so the swing takes about as long as
-  // travelling one cell - the turn keeps pace with the flying instead of
-  // lagging behind and then snapping to catch up.
+  // The heading itself now changes gradually, so the camera only needs a
+  // light trail behind it. Smoothing its heading and hanging the position off
+  // that keeps it sweeping round the snake rather than cutting the corner.
   var f = this.fwd, u = this.up;
   if (!this.cam) this.cam = {f: {x:f.x, y:f.y, z:f.z}, u: {x:u.x, y:u.y, z:u.z}};
   var c = this.cam;
 
-  var step = this.step / (this.boost ? 1.9 : 1);
-  var k = 1 - Math.exp(-(3.0 / Math.max(0.05, step)) * dt);
+  var k = 1 - Math.exp(-7.0 * dt);
   c.f = norm({x: c.f.x + (f.x-c.f.x)*k, y: c.f.y + (f.y-c.f.y)*k, z: c.f.z + (f.z-c.f.z)*k});
   var un = {x: c.u.x + (u.x-c.u.x)*k, y: c.u.y + (u.y-c.u.y)*k, z: c.u.z + (u.z-c.u.z)*k};
   // keep up square to forward, or the view slowly skews as the two drift
@@ -870,27 +927,21 @@ Game3.prototype.draw = function (t, dt) {
     if (pf) items.push({z:pf.z, kind:'cube', p:pf, size:fo.gold ? 1.7 : 1.5,
                         col: fo.gold ? '#fbbf24' : '#f05252', glow:true});
   }
-  var n = this.snake.length;
-  var pts = [];
+  // The beads sit along the flown path, close enough to overlap, so the body
+  // reads as one smooth curve through whatever arc the head just made.
+  var n = this.beads.length;
   for (var si = 0; si < n; si++) {
-    var to = this.snake[si], fr = this.prev[Math.min(si, this.prev.length - 1)];
-    var wpt = {
-      x: fr.x + (to.x-fr.x)*alpha + fr.lx + (to.lx-fr.lx)*alpha,
-      y: fr.y + (to.y-fr.y)*alpha + fr.ly + (to.ly-fr.ly)*alpha,
-      z: fr.z + (to.z-fr.z)*alpha + fr.lz + (to.lz-fr.lz)*alpha
-    };
-    pts.push(wpt);
-    var pp = project(wpt);
+    var pp = project(this.beads[si]);
     if (!pp) continue;
     var kk = n <= 1 ? 0 : si/(n-1);
-    items.push({z:pp.z, kind:'ball', p:pp, size: si === 0 ? 0.98 : 0.86 - kk*0.26,
+    items.push({z:pp.z, kind:'ball', p:pp, size: si === 0 ? 0.98 : 0.88 - kk*0.26,
                 col: si === 0 ? '#86efac' : lerpHex('#34d399', '#0a6b48', kk)});
-    if (si > 0) {
-      var mid = {x:(wpt.x+pts[si-1].x)/2, y:(wpt.y+pts[si-1].y)/2, z:(wpt.z+pts[si-1].z)/2};
-      var pm = project(mid);
-      if (pm) items.push({z:pm.z, kind:'ball', p:pm, size:(0.86 - kk*0.26)*0.52,
-                          col: lerpHex('#34d399', '#0a6b48', kk)});
-    }
+  }
+  // eyes, so it is obvious which way it is pointing
+  var rt = norm(cross(this.fwd, this.up));
+  for (var e = -1; e <= 1; e += 2) {
+    var ep = project(vadd(vadd(this.pos, vmul(this.fwd, 0.34)), vmul(rt, 0.22 * e)));
+    if (ep) items.push({z:ep.z - 0.01, kind:'ball', p:ep, size:0.2, col:'#0b1118'});
   }
   items.sort(function (a, b) { return b.z - a.z; });
 
@@ -966,31 +1017,34 @@ requestAnimationFrame(frame);
 // frame by frame. A jerky camera shows up as a jump straight to 0; a smooth
 // one walks down over roughly one step.
 if (location.search.indexOf('turntest') >= 0) {
-  setTimeout(function () {
+  (function () {
     startGame(3);
-    game.draw(0, 0.016);                       // settle the camera
-    var before = {x: game.cam.f.x, y: game.cam.f.y, z: game.cam.f.z};
-    game.queue(1);                             // bank right
-    game.tick();                               // apply it
-    var target = game.fwd;
-    var lines = ['step = ' + game.step.toFixed(3) + 's'];
+    var f0 = {x: game.fwd.x, y: game.fwd.y, z: game.fwd.z};
+    var lines = ['holding bank right, heading turned so far:'];
     var t = 0;
-    for (var i = 0; i < 14; i++) {
-      t += 0.016;
-      game.draw(t, 0.016);
-      var d = game.cam.f.x*target.x + game.cam.f.y*target.y + game.cam.f.z*target.z;
+    game.inX = 1;
+    for (var i = 0; i < 8; i++) {
+      for (var j = 0; j < 6; j++) { game.update(1/60); t += 1/60; }
+      var d = game.fwd.x*f0.x + game.fwd.y*f0.y + game.fwd.z*f0.z;
       var ang = Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
-      lines.push((t*1000).toFixed(0) + 'ms  ' + ang.toFixed(1) + ' deg to go');
+      lines.push('  ' + t.toFixed(2) + 's   ' + ang.toFixed(1) + ' deg');
     }
-    var startAng = Math.acos(Math.max(-1, Math.min(1,
-      before.x*target.x + before.y*target.y + before.z*target.z))) * 180/Math.PI;
-    lines.unshift('turn is ' + startAng.toFixed(0) + ' deg');
+    // an axis-locked snake can only ever read 1/0/0 style; a free one does not
+    lines.push('');
+    lines.push('heading now  ' + game.fwd.x.toFixed(2) + ', ' +
+               game.fwd.y.toFixed(2) + ', ' + game.fwd.z.toFixed(2));
+    game.inX = 0; game.inY = -1;
+    for (var m = 0; m < 20; m++) game.update(1/60);
+    lines.push('after climbing ' + game.fwd.x.toFixed(2) + ', ' +
+               game.fwd.y.toFixed(2) + ', ' + game.fwd.z.toFixed(2));
+    var axes = [game.fwd.x, game.fwd.y, game.fwd.z].filter(function (v) { return Math.abs(v) > 0.08; });
+    lines.push('axes in play: ' + axes.length + (axes.length > 1 ? '  (diagonal)' : '  (axis locked)'));
     var box = document.createElement('div');
     box.style.cssText = 'position:fixed;inset:0;z-index:99;background:#000;color:#0f0;' +
                         'font:12px monospace;padding:10px;white-space:pre';
     box.textContent = lines.join('\n');
     document.body.appendChild(box);
-  }, 400);
+  })();
 }
 
 // ?sticktest drives the stick through real pointer events and reports what
@@ -1010,16 +1064,15 @@ if (location.search.indexOf('sticktest') >= 0) {
         clientX: cx + push[0] * r.width * 0.45,
         clientY: cy + push[1] * r.height * 0.45
       }));
-      game.q.length = 0;
-      stick.update(1);                       // long enough to fire
-      var got = game.q.length ? game.q[0] : 'nothing';
+      stick.update(0.016);
+      var got = game.inX + ',' + game.inY;
       stick.el.dispatchEvent(new PointerEvent('pointerup', opts));
       out.push(name + ': ' + (got === expect ? 'PASS' : 'FAIL got ' + got));
     }
-    check('push left', [-1, 0], 0);
-    check('push right', [1, 0], 1);
-    check('push up', [0, -1], 2);
-    check('push down', [0, 1], 3);
+    check('push left', [-1, 0], '-1,0');
+    check('push right', [1, 0], '1,0');
+    check('push up', [0, -1], '0,-1');
+    check('push down', [0, 1], '0,1');
 
     // centre must do nothing at all
     startGame(3);
@@ -1027,9 +1080,8 @@ if (location.search.indexOf('sticktest') >= 0) {
     stick.el.dispatchEvent(new PointerEvent('pointerdown', {
       pointerId: 1, bubbles: true,
       clientX: r.left + r.width / 2, clientY: r.top + r.height / 2}));
-    game.q.length = 0;
-    stick.update(1);
-    out.push('dead zone: ' + (game.q.length === 0 ? 'PASS' : 'FAIL fired ' + game.q[0]));
+    stick.update(0.016);
+    out.push('dead zone: ' + (game.inX === 0 && game.inY === 0 ? 'PASS' : 'FAIL'));
 
     var box = document.createElement('div');
     box.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99;background:#000;' +
